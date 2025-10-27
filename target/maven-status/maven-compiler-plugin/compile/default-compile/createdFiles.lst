@@ -1,9 +1,0 @@
-com\integraupt\dto\clsDTOLoginResponse.class
-com\integraupt\servicio\clsServicioAuth.class
-com\integraupt\dto\clsDTOLoginRequest.class
-com\integraupt\entidad\clsEntidadUsuario.class
-com\integraupt\IntegraUPTApplication.class
-com\integraupt\dto\clsDTOLoginResponse$PerfilDTO.class
-com\integraupt\config\clsConfigCors.class
-com\integraupt\repositorio\clsRepositorioAuth.class
-com\integraupt\controlador\clsControladorAuth.class
