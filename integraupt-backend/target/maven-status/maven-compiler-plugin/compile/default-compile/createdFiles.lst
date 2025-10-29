@@ -1,4 +1,5 @@
 com\integraupt\controlador\clsControladorReserva.class
+com\integraupt\repositorio\clsRepositorioEspacio.class
 com\integraupt\entidad\clsEntidadBloqueHorario.class
 com\integraupt\dto\clsDTOActualizarEstadoReserva.class
 com\integraupt\entidad\clsEntidadEspacio.class
@@ -7,8 +8,12 @@ com\integraupt\config\clsConfigCors.class
 com\integraupt\repositorio\clsRepositorioReserva.class
 com\integraupt\config\clsConfigCors$1.class
 com\integraupt\entidad\clsEntidadReserva.class
+com\integraupt\repositorio\clsRepositorioBloqueHorario.class
 com\integraupt\entidad\clsEntidadUsuario.class
+com\integraupt\servicio\clsServicioReserva$1.class
 com\integraupt\dto\clsDTOReserva.class
 com\integraupt\repositorio\clsRepositorioHorario.class
+com\integraupt\repositorio\clsRepositorioUsuario.class
 com\integraupt\servicio\clsServicioReserva.class
+com\integraupt\dto\clsDTOBloqueDisponible.class
 com\integraupt\entidad\clsEntidadHorario.class
