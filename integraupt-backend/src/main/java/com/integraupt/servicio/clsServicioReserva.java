@@ -15,7 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
+import com.integraupt.entidad.clsEntidadHorario;
+import com.integraupt.repositorio.clsRepositorioHorario;
 /**
  * Servicio de negocio para la administración de reservas.
  */
@@ -27,9 +28,12 @@ public class clsServicioReserva {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault());
 
     private final clsRepositorioReserva repositorioReserva;
+    private final clsRepositorioHorario repositorioHorario;
 
-    public clsServicioReserva(clsRepositorioReserva repositorioReserva) {
+    public clsServicioReserva(clsRepositorioReserva repositorioReserva,
+                              clsRepositorioHorario repositorioHorario) {
         this.repositorioReserva = repositorioReserva;
+        this.repositorioHorario = repositorioHorario;
     }
 
     @Transactional(readOnly = true)
@@ -46,6 +50,7 @@ public class clsServicioReserva {
         reserva.setEstado("Aprobada");
         reserva.setMotivo(null);
         clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        actualizarOcupacionHorario(actualizada, true);
         return mapearReserva(actualizada);
     }
 
@@ -58,6 +63,7 @@ public class clsServicioReserva {
         reserva.setEstado("Rechazada");
         reserva.setMotivo(motivo.trim());
         clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        actualizarOcupacionHorario(actualizada, false);
         return mapearReserva(actualizada);
     }
 
@@ -114,6 +120,51 @@ public class clsServicioReserva {
                 return "Pendiente";
             default:
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado no soportado: " + estado);
+        }
+    }
+    private void actualizarOcupacionHorario(clsEntidadReserva reserva, boolean ocupado) {
+        if (reserva == null) {
+            return;
+        }
+
+        clsEntidadEspacio espacio = reserva.getEspacio();
+        clsEntidadBloqueHorario bloque = reserva.getBloque();
+
+        if (espacio == null || bloque == null || reserva.getFechaReserva() == null) {
+            return;
+        }
+
+        String diaSemana = obtenerDiaSemana(reserva.getFechaReserva().getDayOfWeek().getValue());
+        if (diaSemana == null) {
+            return;
+        }
+
+        Optional<clsEntidadHorario> horario =
+                repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
+                        espacio.getId(), bloque.getId(), diaSemana);
+
+        horario.ifPresent(h -> {
+            h.setOcupado(ocupado);
+            repositorioHorario.save(h);
+        });
+    }
+
+    private String obtenerDiaSemana(int dia) {
+        switch (dia) {
+            case 1:
+                return "Lunes";
+            case 2:
+                return "Martes";
+            case 3:
+                return "Miercoles";
+            case 4:
+                return "Jueves";
+            case 5:
+                return "Viernes";
+            case 6:
+                return "Sabado";
+            default:
+                return null;
         }
     }
 }

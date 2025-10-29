@@ -9,4 +9,6 @@ com\integraupt\config\clsConfigCors$1.class
 com\integraupt\entidad\clsEntidadReserva.class
 com\integraupt\entidad\clsEntidadUsuario.class
 com\integraupt\dto\clsDTOReserva.class
+com\integraupt\repositorio\clsRepositorioHorario.class
 com\integraupt\servicio\clsServicioReserva.class
+com\integraupt\entidad\clsEntidadHorario.class
