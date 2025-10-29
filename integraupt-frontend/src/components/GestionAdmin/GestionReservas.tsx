@@ -52,6 +52,7 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
   const [procesandoAccion, setProcesandoAccion] = useState(false);
   const [filtroTipoEspacio, setFiltroTipoEspacio] = useState<'todos' | 'laboratorio' | 'salon'>('todos');
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
+  const [filtroFecha, setFiltroFecha] = useState('');
 
   const urlBase = useMemo(() => 'http://localhost:8082/api/reservas', []);
 
@@ -106,6 +107,16 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
     return (valor || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }, []);
 
+  const normalizarFecha = useCallback((fecha?: string) => {
+    if (!fecha) return null;
+    const date = new Date(fecha);
+    if (Number.isNaN(date.getTime())) {
+      return fecha.slice(0, 10);
+    }
+    const ajustada = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return ajustada.toISOString().split('T')[0];
+  }, []);
+
   const reservasFiltradas = useMemo(() => {
     const termino = normalizarTexto(terminoBusqueda);
     return reservas.filter((reserva) => {
@@ -116,13 +127,19 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
         (filtroTipoEspacio === 'salon' && tipoEspacio.includes('salon'));
 
       if (!coincideTipo) return false;
+
+      if (filtroFecha) {
+              const fechaReservaNormalizada = normalizarFecha(reserva.fechaReserva);
+              if (fechaReservaNormalizada !== filtroFecha) return false;
+            }
+
       if (!termino) return true;
 
       const espacio = normalizarTexto(reserva.espacio);
       const solicitante = normalizarTexto(reserva.solicitante);
       return espacio.includes(termino) || solicitante.includes(termino);
     });
-  }, [filtroTipoEspacio, normalizarTexto, reservas, terminoBusqueda]);
+  }, [filtroFecha, filtroTipoEspacio, normalizarFecha, normalizarTexto, reservas, terminoBusqueda]);
 
   const sinReservas = !cargando && reservas.length === 0;
   const sinCoincidencias = !cargando && reservas.length > 0 && reservasFiltradas.length === 0;
@@ -255,20 +272,32 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
             </select>
           </div>
 
-         <div className="admin-filter-group admin-filter-search">
-           <label className="admin-filter-label">Buscar</label>
-           <div className="admin-search-wrapper">
-             <Search className="admin-search-icon" />
-             <input
-               type="text"
-               value={terminoBusqueda}
-               onChange={(event) => setTerminoBusqueda(event.target.value)}
-               placeholder="Buscar por espacio o solicitante"
-               className="admin-search-input"
-               maxLength={15}   // ← aquí está el cambio
-             />
-           </div>
-         </div>
+          <div className="admin-filter-group">
+                     <label className="admin-filter-label">Fecha de reserva</label>
+                     <div className="admin-search-wrapper">
+                       <Calendar className="admin-search-icon" />
+                       <input
+                         type="date"
+                         value={filtroFecha}
+                         onChange={(event) => setFiltroFecha(event.target.value)}
+                         className="admin-search-input"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="admin-filter-group admin-filter-search">
+                     <label className="admin-filter-label">Buscar</label>
+                     <div className="admin-search-wrapper">
+                       <Search className="admin-search-icon" />
+                       <input
+                         type="text"
+                         value={terminoBusqueda}
+                         onChange={(event) => setTerminoBusqueda(event.target.value)}
+                         placeholder="Buscar por espacio o solicitante"
+                         className="admin-search-input"
+                       />
+                     </div>
+                   </div>
         </div>
 
         <div className="admin-results-count">
