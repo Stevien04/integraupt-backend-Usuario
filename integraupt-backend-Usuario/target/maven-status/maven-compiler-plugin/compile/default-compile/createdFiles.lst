@@ -1,8 +1,0 @@
-com\integraupt\dto\EstadoUsuarioRequest.class
-com\integraupt\servicio\UsuarioService.class
-com\integraupt\excepcion\ManejadorGlobalExcepciones.class
-com\integraupt\excepcion\RecursoNoEncontradoException.class
-com\integraupt\entidad\clsEntidadUsuario.class
-com\integraupt\IntegraUPTApplication.class
-com\integraupt\controlador\UsuarioController.class
-com\integraupt\repositorio\UsuarioRepository.class
