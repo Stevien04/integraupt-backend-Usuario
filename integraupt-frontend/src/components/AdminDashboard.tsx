@@ -186,7 +186,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
          {activeModule === 'reservas' && (
            <div className="admin-content">
-             <GestionReservas />
+             <GestionReservas onAuditLog={addAuditLog} />
            </div>
          )}
 
