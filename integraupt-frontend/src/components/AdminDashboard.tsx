@@ -3,6 +3,7 @@ import { LogOut, Server, Clock, Users, FileText, BarChart3, ClipboardList } from
 import './../styles/AdminDashboard.css';
 import { GestionEspacios } from './GestionAdmin';
 import { GestionUsuarios } from './GestionAdmin';
+import { GestionReservas } from "./GestionAdmin/GestionReservas";
 
 interface User {
   id: string;
@@ -183,18 +184,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
             </div>
           )}
 
-          {/* Gestión de Reservas - Puedes crear GestionReservas.tsx después */}
-          {activeModule === 'reservas' && (
-            <div>
-              <div className="admin-content-header">
-                <div>
-                  <h2 className="admin-content-title">Gestión de Reservas</h2>
-                  <p className="admin-content-subtitle">Aprueba o rechaza las solicitudes de reserva de espacios</p>
-                </div>
-              </div>
-              <p>Componente de reservas - Puedes crear GestionReservas.tsx</p>
-            </div>
-          )}
+         {activeModule === 'reservas' && (
+           <div className="admin-content">
+             <GestionReservas />
+           </div>
+         )}
 
           {/* Gestión de Usuarios - Puedes crear GestionUsuarios.tsx después */}
           {activeModule === 'users' && (

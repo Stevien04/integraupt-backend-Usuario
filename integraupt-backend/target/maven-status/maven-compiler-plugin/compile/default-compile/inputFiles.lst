@@ -1,13 +1,11 @@
-C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorReservaPublica.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioReserva.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadUsuario.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadEspacio.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOActualizarEstadoReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadBloqueHorario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\IntegraUPTApplication.java
-C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\config\clsConfigCors.java
-C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOCrearReserva.java
-C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadReserva.java
-C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadEspacio.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorReserva.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\config\clsConfigCors.java
