@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.integraupt.entidad.clsEntidadHorario;
 import com.integraupt.repositorio.clsRepositorioHorario;
+import java.text.Normalizer;
+import java.util.regex.Pattern;
+import java.time.format.TextStyle;
+import java.time.LocalDate;
 /**
  * Servicio de negocio para la administración de reservas.
  */
@@ -26,6 +30,8 @@ public class clsServicioReserva {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault());
+    private static final Locale LOCALE_ES = new Locale("es", "ES");
+    private static final Pattern DIACRITICS = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
     private final clsRepositorioReserva repositorioReserva;
     private final clsRepositorioHorario repositorioHorario;
@@ -134,7 +140,7 @@ public class clsServicioReserva {
             return;
         }
 
-        String diaSemana = obtenerDiaSemana(reserva.getFechaReserva().getDayOfWeek().getValue());
+        String diaSemana = obtenerDiaSemana(reserva.getFechaReserva());
         if (diaSemana == null) {
             return;
         }
@@ -149,20 +155,29 @@ public class clsServicioReserva {
         });
     }
 
-    private String obtenerDiaSemana(int dia) {
-        switch (dia) {
-            case 1:
-                return "Lunes";
-            case 2:
-                return "Martes";
-            case 3:
-                return "Miercoles";
-            case 4:
-                return "Jueves";
-            case 5:
-                return "Viernes";
-            case 6:
-                return "Sabado";
+    private String obtenerDiaSemana(LocalDate fecha) {
+        if (fecha == null) {
+            return null;
+        }
+
+        String nombreDia = fecha.getDayOfWeek().getDisplayName(TextStyle.FULL, LOCALE_ES);
+        if (nombreDia == null || nombreDia.isBlank()) {
+            return null;
+        }
+
+        String capitalizado = nombreDia.substring(0, 1).toUpperCase(LOCALE_ES)
+                + nombreDia.substring(1).toLowerCase(LOCALE_ES);
+        String sinTildes = Normalizer.normalize(capitalizado, Normalizer.Form.NFD);
+        sinTildes = DIACRITICS.matcher(sinTildes).replaceAll("");
+
+        switch (sinTildes) {
+            case "Lunes":
+            case "Martes":
+            case "Miercoles":
+            case "Jueves":
+            case "Viernes":
+            case "Sabado":
+                return sinTildes;
             default:
                 return null;
         }
