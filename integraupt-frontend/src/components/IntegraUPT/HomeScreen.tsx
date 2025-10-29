@@ -116,7 +116,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* Columna Lateral - Resumen */}
           <div className="home-sidebar">
             {/* Próximos Eventos */}
-            <div className="home-card">
+            {/* <div className="home-card">
               <div className="home-card-header">
                 <Calendar className="home-card-icon home-card-icon-purple" />
                 <h2 className="home-card-title">Próximos Eventos</h2>
@@ -145,7 +145,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               >
                 Ver Todos los Eventos
               </button>
-            </div>
+            </div> */}
 
             {/* Reservas Activas */}
             <div className="home-card">

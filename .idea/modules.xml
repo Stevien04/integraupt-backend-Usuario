@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/appUPT.iml" filepath="$PROJECT_DIR$/.idea/appUPT.iml" />
+      <module fileurl="file://$PROJECT_DIR$/integraupt-backend-Usuario.iml" filepath="$PROJECT_DIR$/integraupt-backend-Usuario.iml" />
       <module fileurl="file://$PROJECT_DIR$/integraupt-frontend/integraupt-frontend.iml" filepath="$PROJECT_DIR$/integraupt-frontend/integraupt-frontend.iml" />
     </modules>
   </component>

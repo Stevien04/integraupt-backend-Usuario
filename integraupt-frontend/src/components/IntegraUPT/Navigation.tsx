@@ -43,7 +43,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const navigationItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'servicios', label: 'Servicios', icon: Briefcase },
-    { id: 'eventos', label: 'Eventos', icon: Calendar },
+    // { id: 'eventos', label: 'Eventos', icon: Calendar },
     { id: 'perfil', label: 'Mi Perfil', icon: User },
   ];
 
