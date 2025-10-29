@@ -32,9 +32,9 @@ CREATE TABLE IF NOT EXISTS `auditoriareserva` (
   KEY `UsuarioCambio` (`UsuarioCambio`),
   CONSTRAINT `auditoriareserva_ibfk_1` FOREIGN KEY (`IdReserva`) REFERENCES `reserva` (`IdReserva`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `auditoriareserva_ibfk_2` FOREIGN KEY (`UsuarioCambio`) REFERENCES `usuario` (`IdUsuario`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.auditoriareserva: ~11 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.auditoriareserva: ~15 rows (aproximadamente)
 INSERT INTO `auditoriareserva` (`IdAudit`, `IdReserva`, `EstadoAnterior`, `EstadoNuevo`, `FechaCambio`, `UsuarioCambio`) VALUES
 	(1, 1, 'Pendiente', 'Aprobada', '2025-10-29 02:11:16', 1),
 	(2, 1, 'Aprobada', 'Pendiente\r\n', '2025-10-29 02:12:31', 1),
@@ -46,7 +46,23 @@ INSERT INTO `auditoriareserva` (`IdAudit`, `IdReserva`, `EstadoAnterior`, `Estad
 	(8, 1, 'Pediente', 'Pendiente', '2025-10-29 03:00:11', 1),
 	(9, 1, 'Pendiente', 'Aprobada', '2025-10-29 03:05:46', 1),
 	(10, 1, 'Aprobada', 'Pendiente', '2025-10-29 03:06:52', 1),
-	(11, 1, 'Pendiente', 'Aprobada', '2025-10-29 03:08:20', 1);
+	(11, 1, 'Pendiente', 'Aprobada', '2025-10-29 03:08:20', 1),
+	(12, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:22:23', 1),
+	(13, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:23:28', 1),
+	(14, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:38:39', 1),
+	(15, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:39:08', 1),
+	(16, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:43:02', 1),
+	(17, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:43:50', 1),
+	(18, 2, 'Pendiente', 'Rechazada', '2025-10-29 09:53:02', 2),
+	(19, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:53:12', 1),
+	(20, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:54:06', 1),
+	(21, 2, 'Rechazada', 'Pendiente', '2025-10-29 09:54:37', 2),
+	(22, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:54:40', 1),
+	(23, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:55:06', 1),
+	(24, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:56:11', 1),
+	(25, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:56:30', 1),
+	(26, 1, 'Aprobada', 'Pendiente', '2025-10-29 09:56:49', 1),
+	(27, 1, 'Pendiente', 'Aprobada', '2025-10-29 09:57:38', 1);
 
 -- Volcando estructura para tabla sisintupt.bloqueshorarios
 CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
@@ -122,11 +138,13 @@ CREATE TABLE IF NOT EXISTS `horarios` (
   KEY `FK_horario_bloque` (`bloque`),
   CONSTRAINT `FK_horario_bloque` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_horario_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.horarios: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.horarios: ~3 rows (aproximadamente)
 INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`) VALUES
-	(1, 1, 1, 'Lunes', 0);
+	(1, 1, 1, 'Lunes', 0),
+	(2, 1, 1, 'Martes', 0),
+	(3, 1, 1, 'Miercoles', 1);
 
 -- Volcando estructura para tabla sisintupt.reserva
 CREATE TABLE IF NOT EXISTS `reserva` (
@@ -146,11 +164,12 @@ CREATE TABLE IF NOT EXISTS `reserva` (
   CONSTRAINT `FK_reserva_bloque` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`),
   CONSTRAINT `FK_reserva_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`),
   CONSTRAINT `FK_reserva_usuario` FOREIGN KEY (`usuario`) REFERENCES `usuario` (`IdUsuario`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.reserva: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.reserva: ~2 rows (aproximadamente)
 INSERT INTO `reserva` (`IdReserva`, `usuario`, `espacio`, `bloque`, `estado`, `fechaReserva`, `fechaSolicitud`, `Descripcion`, `Motivo`) VALUES
-	(1, 1, 1, 1, 'Aprobada', '2025-10-29', '2025-10-29 01:15:33', 'COOL\r\n', NULL);
+	(1, 1, 1, 1, 'Aprobada', '2025-10-29', '2025-10-29 01:15:33', 'COOL\r\n', NULL),
+	(2, 2, 1, 1, 'Pendiente', '2025-10-28', '2025-10-29 09:50:43', 'asd', 'Hola');
 
 -- Volcando estructura para evento sisintupt.reset_horarios_domingo
 DELIMITER //
@@ -246,28 +265,6 @@ BEGIN
         INSERT INTO auditoriaReserva (IdReserva, EstadoAnterior, EstadoNuevo, UsuarioCambio)
         VALUES (NEW.IdReserva, OLD.estado, NEW.estado, NEW.usuario);
     END IF;
-END//
-DELIMITER ;
-SET SQL_MODE=@OLDTMP_SQL_MODE;
-
--- Volcando estructura para disparador sisintupt.trg_crear_horarios
-SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';
-DELIMITER //
-CREATE TRIGGER trg_crear_horarios
-AFTER INSERT ON bloqueshorarios
-FOR EACH ROW
-BEGIN
-    INSERT INTO horarios (espacio, bloque, diaSemana, ocupado)
-    SELECT e.IdEspacio, NEW.IdBloque, d.dia, 0
-    FROM espacio e
-    CROSS JOIN (
-        SELECT 'Lunes' AS dia
-        UNION ALL SELECT 'Martes'
-        UNION ALL SELECT 'Miercoles'
-        UNION ALL SELECT 'Jueves'
-        UNION ALL SELECT 'Viernes'
-        UNION ALL SELECT 'Sabado'
-    ) d;
 END//
 DELIMITER ;
 SET SQL_MODE=@OLDTMP_SQL_MODE;
