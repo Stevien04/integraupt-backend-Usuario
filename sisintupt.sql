@@ -32,9 +32,21 @@ CREATE TABLE IF NOT EXISTS `auditoriareserva` (
   KEY `UsuarioCambio` (`UsuarioCambio`),
   CONSTRAINT `auditoriareserva_ibfk_1` FOREIGN KEY (`IdReserva`) REFERENCES `reserva` (`IdReserva`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `auditoriareserva_ibfk_2` FOREIGN KEY (`UsuarioCambio`) REFERENCES `usuario` (`IdUsuario`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.auditoriareserva: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.auditoriareserva: ~11 rows (aproximadamente)
+INSERT INTO `auditoriareserva` (`IdAudit`, `IdReserva`, `EstadoAnterior`, `EstadoNuevo`, `FechaCambio`, `UsuarioCambio`) VALUES
+	(1, 1, 'Pendiente', 'Aprobada', '2025-10-29 02:11:16', 1),
+	(2, 1, 'Aprobada', 'Pendiente\r\n', '2025-10-29 02:12:31', 1),
+	(3, 1, 'Pendiente\r\n', 'Pendiente', '2025-10-29 02:13:41', 1),
+	(4, 1, 'Pendiente', 'Rechazada', '2025-10-29 02:14:01', 1),
+	(5, 1, 'Rechazada', 'pendiente', '2025-10-29 02:37:58', 1),
+	(6, 1, 'Pendiente', 'Rechazada', '2025-10-29 02:40:38', 1),
+	(7, 1, 'Rechazada', 'Pediente', '2025-10-29 02:59:30', 1),
+	(8, 1, 'Pediente', 'Pendiente', '2025-10-29 03:00:11', 1),
+	(9, 1, 'Pendiente', 'Aprobada', '2025-10-29 03:05:46', 1),
+	(10, 1, 'Aprobada', 'Pendiente', '2025-10-29 03:06:52', 1),
+	(11, 1, 'Pendiente', 'Aprobada', '2025-10-29 03:08:20', 1);
 
 -- Volcando estructura para tabla sisintupt.bloqueshorarios
 CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
@@ -46,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
   PRIMARY KEY (`IdBloque`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.bloqueshorarios: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.bloqueshorarios: ~0 rows (aproximadamente)
 INSERT INTO `bloqueshorarios` (`IdBloque`, `Orden`, `Nombre`, `HoraInicio`, `HoraFinal`) VALUES
 	(1, 1, '1', '02:00:00', '04:00:00');
 
@@ -94,7 +106,7 @@ CREATE TABLE IF NOT EXISTS `facultad` (
   PRIMARY KEY (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.facultad: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.facultad: ~0 rows (aproximadamente)
 INSERT INTO `facultad` (`IdFacultad`, `Nombre`) VALUES
 	(1, 'FAING');
 
@@ -121,9 +133,9 @@ CREATE TABLE IF NOT EXISTS `reserva` (
   `IdReserva` int(11) NOT NULL AUTO_INCREMENT,
   `usuario` int(11) NOT NULL,
   `espacio` int(11) NOT NULL,
-  `fechaReserva` date NOT NULL,
   `bloque` int(11) NOT NULL,
   `estado` varchar(50) NOT NULL DEFAULT 'Pendiente',
+  `fechaReserva` date NOT NULL,
   `fechaSolicitud` datetime NOT NULL DEFAULT current_timestamp(),
   `Descripcion` tinytext NOT NULL,
   `Motivo` tinytext DEFAULT NULL,
@@ -137,8 +149,8 @@ CREATE TABLE IF NOT EXISTS `reserva` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Volcando datos para la tabla sisintupt.reserva: ~1 rows (aproximadamente)
-INSERT INTO `reserva` (`IdReserva`, `usuario`, `espacio`, `fechaReserva`, `bloque`, `estado`, `fechaSolicitud`, `Descripcion`, `Motivo`) VALUES
-	(1, 1, 1, '2025-10-29', 1, 'Pendiente', '2025-10-29 01:15:33', 'COOL\r\n', NULL);
+INSERT INTO `reserva` (`IdReserva`, `usuario`, `espacio`, `bloque`, `estado`, `fechaReserva`, `fechaSolicitud`, `Descripcion`, `Motivo`) VALUES
+	(1, 1, 1, 1, 'Aprobada', '2025-10-29', '2025-10-29 01:15:33', 'COOL\r\n', NULL);
 
 -- Volcando estructura para evento sisintupt.reset_horarios_domingo
 DELIMITER //
@@ -153,9 +165,11 @@ CREATE TABLE IF NOT EXISTS `rol` (
   UNIQUE KEY `Nombre` (`Nombre`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.rol: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.rol: ~3 rows (aproximadamente)
 INSERT INTO `rol` (`IdRol`, `Nombre`) VALUES
-	(1, 'TECNICO');
+	(1, 'TECNICO'),
+	(2, 'Estudiante'),
+	(3, 'Administrador');
 
 -- Volcando estructura para tabla sisintupt.usuario
 CREATE TABLE IF NOT EXISTS `usuario` (
@@ -184,11 +198,12 @@ CREATE TABLE IF NOT EXISTS `usuario` (
   CONSTRAINT `FK_usuario_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`),
   CONSTRAINT `FK_usuario_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`),
   CONSTRAINT `FK_usuario_rol` FOREIGN KEY (`Rol`) REFERENCES `rol` (`IdRol`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.usuario: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.usuario: ~2 rows (aproximadamente)
 INSERT INTO `usuario` (`IdUsuario`, `Nombre`, `Apellido`, `CodigoU`, `CorreoU`, `TipoDoc`, `NumDoc`, `Rol`, `Facultad`, `Escuela`, `Celular`, `Genero`, `Password`, `Estado`, `Sesion`) VALUES
-	(1, 'Stevie', 'Marca', '2023076802', 'S@GMAIL.COM', 'DNI\r\n', '72405382', 1, 1, 1, '44', b'1', '123', 1, 0);
+	(1, 'Stevie', 'Marca', '2023076802', 'S@GMAIL.COM', 'DNI\r\n', '72405382', 3, 1, 1, '44', b'1', '123', 1, 0),
+	(2, 'Cristian', 'Quisque', '2032076800', 'C@gmail.com', 'DNI', '74405382', 2, 1, 1, '44', b'1', '123', 1, 0);
 
 -- Volcando estructura para disparador sisintupt.trg_actualizar_horario_update
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';

@@ -5,8 +5,10 @@ import {
   Check,
   ClipboardList,
   Clock,
+  Filter,
   Loader2,
   MapPin,
+  Search,
   User,
   X
 } from 'lucide-react';
@@ -48,8 +50,9 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
   const [reservaSeleccionada, setReservaSeleccionada] = useState<Reserva | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [procesandoAccion, setProcesandoAccion] = useState(false);
+  const [filtroTipoEspacio, setFiltroTipoEspacio] = useState<'todos' | 'laboratorio' | 'salon'>('todos');
+  const [terminoBusqueda, setTerminoBusqueda] = useState('');
 
-  // 🚀 Cambiado al puerto 8082
   const urlBase = useMemo(() => 'http://localhost:8082/api/reservas', []);
 
   const limpiarMensaje = useCallback(() => {
@@ -62,13 +65,9 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
     try {
       const response = await fetch(`${urlBase}?estado=${encodeURIComponent(estadoActivo)}`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
       });
-      if (!response.ok) {
-        throw new Error('No se pudo obtener la lista de reservas');
-      }
+      if (!response.ok) throw new Error('No se pudo obtener la lista de reservas');
       const data = await response.json();
       const reservasMapeadas: Reserva[] = Array.isArray(data)
         ? data.map((reserva: any) => ({
@@ -103,23 +102,42 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
     cargarReservas();
   }, [cargarReservas]);
 
+  const normalizarTexto = useCallback((valor?: string) => {
+    return (valor || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }, []);
+
+  const reservasFiltradas = useMemo(() => {
+    const termino = normalizarTexto(terminoBusqueda);
+    return reservas.filter((reserva) => {
+      const tipoEspacio = normalizarTexto(reserva.tipoEspacio);
+      const coincideTipo =
+        filtroTipoEspacio === 'todos' ||
+        (filtroTipoEspacio === 'laboratorio' && tipoEspacio.includes('laboratorio')) ||
+        (filtroTipoEspacio === 'salon' && tipoEspacio.includes('salon'));
+
+      if (!coincideTipo) return false;
+      if (!termino) return true;
+
+      const espacio = normalizarTexto(reserva.espacio);
+      const solicitante = normalizarTexto(reserva.solicitante);
+      return espacio.includes(termino) || solicitante.includes(termino);
+    });
+  }, [filtroTipoEspacio, normalizarTexto, reservas, terminoBusqueda]);
+
+  const sinReservas = !cargando && reservas.length === 0;
+  const sinCoincidencias = !cargando && reservas.length > 0 && reservasFiltradas.length === 0;
+
   const manejarAprobacion = async (reserva: Reserva) => {
     setProcesandoAccion(true);
     try {
-      const response = await fetch(`${urlBase}/${reserva.id}/aprobar`, {
-        method: 'PUT'
-      });
-      if (!response.ok) {
-        throw new Error('No se pudo aprobar la reserva');
-      }
+      const response = await fetch(`${urlBase}/${reserva.id}/aprobar`, { method: 'PUT' });
+      if (!response.ok) throw new Error('No se pudo aprobar la reserva');
       onAuditLog('admin', 'Aprobar Reserva', 'Reservas', 'success', `Reserva #${reserva.id} aprobada`);
       setMensaje({ tipo: 'success', texto: 'La reserva ha sido aprobada correctamente.' });
       limpiarMensaje();
       await cargarReservas();
     } catch (err) {
-      console.error(err);
-      setMensaje({ tipo: 'error', texto: 'Ocurrió un error al aprobar la reserva.' });
-      limpiarMensaje();
+      console.error('Error al aprobar reserva:', err);
       onAuditLog('admin', 'Aprobar Reserva', 'Reservas', 'failed', `Error al aprobar la reserva #${reserva.id}`);
     } finally {
       setProcesandoAccion(false);
@@ -150,18 +168,14 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ motivo: motivoRechazo })
       });
-      if (!response.ok) {
-        throw new Error('No se pudo rechazar la reserva');
-      }
+      if (!response.ok) throw new Error('No se pudo rechazar la reserva');
       onAuditLog('admin', 'Rechazar Reserva', 'Reservas', 'success', `Reserva #${reservaSeleccionada.id} rechazada`);
       setMensaje({ tipo: 'success', texto: 'La reserva ha sido rechazada.' });
       limpiarMensaje();
       cerrarModalRechazo();
       await cargarReservas();
     } catch (err) {
-      console.error(err);
-      setMensaje({ tipo: 'error', texto: 'Ocurrió un error al rechazar la reserva.' });
-      limpiarMensaje();
+      console.error('Error al rechazar reserva:', err);
       onAuditLog('admin', 'Rechazar Reserva', 'Reservas', 'failed', `Error al rechazar la reserva #${reservaSeleccionada.id}`);
     } finally {
       setProcesandoAccion(false);
@@ -221,12 +235,55 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
         </div>
       )}
 
+      <div className="admin-filters-section">
+        <div className="admin-filters-header">
+          <Filter className="admin-filters-icon" />
+          <span className="admin-filters-title">Filtros y búsqueda</span>
+        </div>
+
+        <div className="admin-filters-grid">
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Tipo de espacio</label>
+            <select
+              value={filtroTipoEspacio}
+              onChange={(event) => setFiltroTipoEspacio(event.target.value as 'todos' | 'laboratorio' | 'salon')}
+              className="admin-filter-select"
+            >
+              <option value="todos">Todos</option>
+              <option value="laboratorio">Laboratorio</option>
+              <option value="salon">Salón</option>
+            </select>
+          </div>
+
+         <div className="admin-filter-group admin-filter-search">
+           <label className="admin-filter-label">Buscar</label>
+           <div className="admin-search-wrapper">
+             <Search className="admin-search-icon" />
+             <input
+               type="text"
+               value={terminoBusqueda}
+               onChange={(event) => setTerminoBusqueda(event.target.value)}
+               placeholder="Buscar por espacio o solicitante"
+               className="admin-search-input"
+               maxLength={15}   // ← aquí está el cambio
+             />
+           </div>
+         </div>
+        </div>
+
+        <div className="admin-results-count">
+          <span className="admin-results-text">
+            {reservasFiltradas.length} de {reservas.length} reservas encontradas
+          </span>
+        </div>
+      </div>
+
       {cargando ? (
         <div className="admin-loading">
           <div className="admin-loading-spinner"></div>
           <p>Cargando reservas...</p>
         </div>
-      ) : reservas.length === 0 ? (
+      ) : sinReservas ? (
         <div className="admin-empty-state">
           <ClipboardList className="admin-empty-icon" />
           <h3 className="admin-empty-title">No hay reservas en este estado</h3>
@@ -236,9 +293,17 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
               : 'Actualmente no existen reservas con este estado.'}
           </p>
         </div>
+      ) : sinCoincidencias ? (
+        <div className="admin-empty-state">
+          <Search className="admin-empty-icon" />
+          <h3 className="admin-empty-title">Sin coincidencias</h3>
+          <p className="admin-empty-description">
+            Ajusta los filtros o la búsqueda para encontrar la reserva que necesitas.
+          </p>
+        </div>
       ) : (
         <div className="admin-reservas-grid">
-          {reservas.map((reserva) => (
+          {reservasFiltradas.map((reserva) => (
             <div key={reserva.id} className="admin-reserva-card">
               <div className="admin-reserva-header">
                 <div>
