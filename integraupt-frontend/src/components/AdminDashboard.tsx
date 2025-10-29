@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { LogOut, Server, Clock, Users, FileText, BarChart3, Plus, Edit, Trash2, Search, Download, X, Check, AlertCircle, Eye, Filter, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { LogOut, Server, Clock, Users, FileText, BarChart3, Plus, Edit, Trash2, Search, Download, X, Check, AlertCircle, ClipboardList, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import './../styles/AdminDashboard.css';
+
+import { actualizarEstadoReserva, fetchReservasAdmin, fetchResumenReservas, type EstadoReserva, type Reserva } from '../utils/api/reservasApi';
+
 
 interface User {
   id: string;

@@ -11,4 +11,7 @@ import java.util.List;
 public interface clsRepositorioReserva extends JpaRepository<clsEntidadReserva, String> {
 
     List<clsEntidadReserva> findAllByEstadoIgnoreCaseOrderByFechaAscHoraInicioAsc(String estado);
+    List<clsEntidadReserva> findAllByOrderByFechaAscHoraInicioAsc();
+
+    List<clsEntidadReserva> findAllByUsuarioIdOrderByFechaDescHoraInicioAsc(String usuarioId);
 }

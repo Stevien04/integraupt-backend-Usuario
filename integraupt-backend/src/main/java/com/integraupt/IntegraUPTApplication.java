@@ -8,7 +8,7 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 /**
  * Clase principal de la aplicación IntegraUPT Backend
  * Sistema de gestión para la Universidad Privada de Tacna
- * 
+ *
  * @author IntegraUPT Team
  * @version 1.0.0
  */

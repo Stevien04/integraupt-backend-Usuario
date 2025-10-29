@@ -22,6 +22,10 @@ public class clsControladorReserva {
     public clsControladorReserva(clsServicioReserva servicioReserva) {
         this.servicioReserva = servicioReserva;
     }
+    @GetMapping
+    public List<clsDTOReserva> listarTodas() {
+        return servicioReserva.obtenerTodas();
+    }
 
     @GetMapping("/pendientes")
     public List<clsDTOReserva> listarPendientes() {

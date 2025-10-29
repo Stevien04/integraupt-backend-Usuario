@@ -1,6 +1,7 @@
 package com.integraupt.servicio;
 
 import com.integraupt.dto.clsDTOReserva;
+import com.integraupt.dto.clsDTOCrearReserva;
 import com.integraupt.entidad.clsEntidadReserva;
 import com.integraupt.repositorio.clsRepositorioReserva;
 import jakarta.persistence.EntityNotFoundException;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +45,17 @@ public class clsServicioReserva {
     }
 
     /**
+     * Obtiene todas las reservas registradas ordenadas cronológicamente.
+     */
+    @Transactional(readOnly = true)
+    public List<clsDTOReserva> obtenerTodas() {
+        return repositorio.findAllByOrderByFechaAscHoraInicioAsc()
+                .stream()
+                .map(this::convertirADTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Obtiene un resumen con el total de reservas por estado.
      */
     @Transactional(readOnly = true)
@@ -53,6 +66,47 @@ public class clsServicioReserva {
                         Collectors.counting()
                 ));
     }
+
+    /**
+     * Obtiene todas las reservas asociadas a un usuario específico.
+     */
+    @Transactional(readOnly = true)
+    public List<clsDTOReserva> obtenerPorUsuario(String usuarioId) {
+        return repositorio.findAllByUsuarioIdOrderByFechaDescHoraInicioAsc(usuarioId)
+                .stream()
+                .map(this::convertirADTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Registra una nueva reserva enviada desde el portal de autoservicio.
+     */
+    @Transactional
+    public clsDTOReserva crear(clsDTOCrearReserva request) {
+        clsEntidadReserva entidad = new clsEntidadReserva();
+        entidad.setId(UUID.randomUUID().toString());
+        entidad.setUsuarioId(request.getUsuarioId());
+        entidad.setEspacioId(request.getEspacioId());
+        if (StringUtils.hasText(request.getTipo())) {
+            entidad.setTipo(StringUtils.capitalize(request.getTipo().trim().toLowerCase(Locale.getDefault())));
+        } else {
+            entidad.setTipo(null);
+        }
+        entidad.setEstado(ESTADO_PENDIENTE);
+        entidad.setCurso(request.getCurso());
+        entidad.setCiclo(request.getCiclo());
+        entidad.setMotivo(request.getMotivo());
+        entidad.setMotivoRechazo(null);
+        entidad.setFecha(request.getFecha());
+        entidad.setHoraInicio(request.getHoraInicio());
+        entidad.setHoraFin(request.getHoraFin());
+        entidad.setCreadoEn(LocalDateTime.now());
+        entidad.setActualizadoEn(LocalDateTime.now());
+
+        clsEntidadReserva guardada = repositorio.save(entidad);
+        return convertirADTO(guardada);
+    }
+
 
     /**
      * Aprueba una reserva.
