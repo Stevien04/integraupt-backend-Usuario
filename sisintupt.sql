@@ -46,7 +46,9 @@ CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
   PRIMARY KEY (`IdBloque`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.bloqueshorarios: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.bloqueshorarios: ~1 rows (aproximadamente)
+INSERT INTO `bloqueshorarios` (`IdBloque`, `Orden`, `Nombre`, `HoraInicio`, `HoraFinal`) VALUES
+	(1, 1, '1', '02:00:00', '04:00:00');
 
 -- Volcando estructura para tabla sisintupt.escuela
 CREATE TABLE IF NOT EXISTS `escuela` (
@@ -58,14 +60,16 @@ CREATE TABLE IF NOT EXISTS `escuela` (
   CONSTRAINT `FK__facultad` FOREIGN KEY (`IdFacultad`) REFERENCES `facultad` (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.escuela: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.escuela: ~1 rows (aproximadamente)
+INSERT INTO `escuela` (`IdEscuela`, `IdFacultad`, `Nombre`) VALUES
+	(1, 1, 'EPIS');
 
 -- Volcando estructura para tabla sisintupt.espacio
 CREATE TABLE IF NOT EXISTS `espacio` (
   `IdEspacio` int(11) NOT NULL AUTO_INCREMENT,
   `Codigo` varchar(20) NOT NULL DEFAULT '',
   `Nombre` varchar(100) NOT NULL,
-  `Tipo` enum('Laboratorio','Salon') NOT NULL DEFAULT 'Laboratorio',
+  `Tipo` varchar(20) NOT NULL,
   `Capacidad` int(11) NOT NULL,
   `Equipamiento` text DEFAULT NULL,
   `Facultad` int(11) NOT NULL,
@@ -77,9 +81,11 @@ CREATE TABLE IF NOT EXISTS `espacio` (
   KEY `FK_espacio_escuela` (`Escuela`),
   CONSTRAINT `FK_espacio_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`),
   CONSTRAINT `FK_espacio_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.espacio: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.espacio: ~1 rows (aproximadamente)
+INSERT INTO `espacio` (`IdEspacio`, `Codigo`, `Nombre`, `Tipo`, `Capacidad`, `Equipamiento`, `Facultad`, `Escuela`, `Estado`) VALUES
+	(1, 'P-301', 'P-301', 'Salon', 15, 'COOL', 1, 1, 1);
 
 -- Volcando estructura para tabla sisintupt.facultad
 CREATE TABLE IF NOT EXISTS `facultad` (
@@ -88,7 +94,9 @@ CREATE TABLE IF NOT EXISTS `facultad` (
   PRIMARY KEY (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.facultad: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.facultad: ~1 rows (aproximadamente)
+INSERT INTO `facultad` (`IdFacultad`, `Nombre`) VALUES
+	(1, 'FAING');
 
 -- Volcando estructura para tabla sisintupt.horarios
 CREATE TABLE IF NOT EXISTS `horarios` (
@@ -102,9 +110,11 @@ CREATE TABLE IF NOT EXISTS `horarios` (
   KEY `FK_horario_bloque` (`bloque`),
   CONSTRAINT `FK_horario_bloque` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_horario_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.horarios: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.horarios: ~1 rows (aproximadamente)
+INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`) VALUES
+	(1, 1, 1, 'Lunes', 0);
 
 -- Volcando estructura para tabla sisintupt.reserva
 CREATE TABLE IF NOT EXISTS `reserva` (
@@ -124,9 +134,11 @@ CREATE TABLE IF NOT EXISTS `reserva` (
   CONSTRAINT `FK_reserva_bloque` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`),
   CONSTRAINT `FK_reserva_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`),
   CONSTRAINT `FK_reserva_usuario` FOREIGN KEY (`usuario`) REFERENCES `usuario` (`IdUsuario`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.reserva: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.reserva: ~1 rows (aproximadamente)
+INSERT INTO `reserva` (`IdReserva`, `usuario`, `espacio`, `fechaReserva`, `bloque`, `estado`, `fechaSolicitud`, `Descripcion`, `Motivo`) VALUES
+	(1, 1, 1, '2025-10-29', 1, 'Pendiente', '2025-10-29 01:15:33', 'COOL\r\n', NULL);
 
 -- Volcando estructura para evento sisintupt.reset_horarios_domingo
 DELIMITER //
@@ -142,6 +154,8 @@ CREATE TABLE IF NOT EXISTS `rol` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Volcando datos para la tabla sisintupt.rol: ~0 rows (aproximadamente)
+INSERT INTO `rol` (`IdRol`, `Nombre`) VALUES
+	(1, 'TECNICO');
 
 -- Volcando estructura para tabla sisintupt.usuario
 CREATE TABLE IF NOT EXISTS `usuario` (
@@ -170,9 +184,11 @@ CREATE TABLE IF NOT EXISTS `usuario` (
   CONSTRAINT `FK_usuario_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`),
   CONSTRAINT `FK_usuario_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`),
   CONSTRAINT `FK_usuario_rol` FOREIGN KEY (`Rol`) REFERENCES `rol` (`IdRol`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.usuario: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.usuario: ~1 rows (aproximadamente)
+INSERT INTO `usuario` (`IdUsuario`, `Nombre`, `Apellido`, `CodigoU`, `CorreoU`, `TipoDoc`, `NumDoc`, `Rol`, `Facultad`, `Escuela`, `Celular`, `Genero`, `Password`, `Estado`, `Sesion`) VALUES
+	(1, 'Stevie', 'Marca', '2023076802', 'S@GMAIL.COM', 'DNI\r\n', '72405382', 1, 1, 1, '44', b'1', '123', 1, 0);
 
 -- Volcando estructura para disparador sisintupt.trg_actualizar_horario_update
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';
