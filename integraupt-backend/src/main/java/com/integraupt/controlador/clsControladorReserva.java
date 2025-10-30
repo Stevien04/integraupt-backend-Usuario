@@ -2,6 +2,7 @@ package com.integraupt.controlador;
 
 import com.integraupt.dto.clsDTOActualizarEstadoReserva;
 import com.integraupt.dto.clsDTOReserva;
+import com.integraupt.dto.clsDTOReservaUsuarioRequest;
 import com.integraupt.servicio.clsServicioReserva;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +35,12 @@ public class clsControladorReserva {
     @GetMapping
     public List<clsDTOReserva> listarPorEstado(@RequestParam(value = "estado", required = false) String estado) {
         return servicioReserva.obtenerReservasPorEstado(estado);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public clsDTOReserva crear(@Valid @RequestBody clsDTOReservaUsuarioRequest request) {
+        return servicioReserva.crearReservaUsuario(request);
     }
 
     @PutMapping("/{id}/aprobar")

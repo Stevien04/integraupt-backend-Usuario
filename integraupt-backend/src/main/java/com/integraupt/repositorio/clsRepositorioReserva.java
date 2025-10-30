@@ -1,6 +1,8 @@
 package com.integraupt.repositorio;
 
+import com.integraupt.entidad.clsEntidadBloqueHorario;
 import com.integraupt.entidad.clsEntidadEspacio;
+import com.integraupt.entidad.clsEntidadEspacio_Reserva;
 import com.integraupt.entidad.clsEntidadReserva;
 
 import java.time.LocalDate;
@@ -18,4 +20,11 @@ public interface clsRepositorioReserva extends JpaRepository<clsEntidadReserva, 
     Long countByFechaSolicitudBetween(LocalDateTime inicio, LocalDateTime fin);
     Long countByFechaSolicitudBetweenAndEstado(LocalDateTime inicio, LocalDateTime fin, String estado);
     Long countByEspacioAndEstado(clsEntidadEspacio espacio, String estado);
+
+
+boolean existsByEspacioAndFechaReservaAndBloqueAndEstadoIn(
+        clsEntidadEspacio_Reserva espacio,
+        LocalDate fechaReserva,
+        clsEntidadBloqueHorario bloque,
+        List<String> estados);
 }

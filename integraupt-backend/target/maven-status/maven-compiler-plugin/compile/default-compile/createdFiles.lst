@@ -2,10 +2,12 @@ com\integraupt\entidad\clsEntidadHorarioCurso$DiaSemana.class
 com\integraupt\servicio\clsServicioHorario.class
 com\integraupt\servicio\ReportesService.class
 com\integraupt\dto\clsDTOUsuarioResponse$UsuarioDTO.class
+com\integraupt\repositorio\clsRepositorioEspacioReserva.class
 com\integraupt\IntegraUPTApplication.class
 com\integraupt\servicio\clsServicioEspacio.class
 com\integraupt\controlador\clsControladorAuth.class
 com\integraupt\controlador\clsControladorEspacio.class
+com\integraupt\repositorio\clsRepositorioBloqueHorario.class
 com\integraupt\entidad\clsEntidadUsuario.class
 com\integraupt\dto\clsDTOLoginResponse$PerfilDTO.class
 com\integraupt\dto\clsDTOCursoHorarioResponse.class
@@ -18,6 +20,7 @@ com\integraupt\controlador\clsControladorHorario.class
 com\integraupt\dto\clsDTOEspacioResponse.class
 com\integraupt\config\clsConfigCors.class
 com\integraupt\controlador\ReportesController.class
+com\integraupt\repositorio\clsRepositorioUsuarioReserva.class
 com\integraupt\servicio\clsServicioCatalogos.class
 com\integraupt\entidad\clsEntidadEspacio_Reserva.class
 com\integraupt\repositorio\clsRepositorioEspacio.class
@@ -45,6 +48,7 @@ com\integraupt\dto\clsDTOUsuarioResponse.class
 com\integraupt\entidad\clsEntidadHorario$DiaSemana.class
 com\integraupt\repositorio\clsRepositorioReserva.class
 com\integraupt\servicio\clsServicioUsuario.class
+com\integraupt\dto\clsDTOReservaUsuarioRequest.class
 com\integraupt\repositorio\clsRepositorioHorarioCurso.class
 com\integraupt\dto\ReporteEstadisticasDTO.class
 com\integraupt\dto\clsDTOEspacioRequest.class

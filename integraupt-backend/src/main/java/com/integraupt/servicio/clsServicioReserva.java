@@ -1,26 +1,32 @@
 package com.integraupt.servicio;
 
+import com.integraupt.dto.clsDTOReserva;
+import com.integraupt.dto.clsDTOReservaUsuarioRequest;
 import com.integraupt.entidad.clsEntidadBloqueHorario;
 import com.integraupt.entidad.clsEntidadEspacio_Reserva;
+import com.integraupt.entidad.clsEntidadHorario;
 import com.integraupt.entidad.clsEntidadReserva;
 import com.integraupt.entidad.clsEntidadUsuario_Reserva;
-import com.integraupt.entidad.clsEntidadHorario;
-import com.integraupt.dto.clsDTOReserva;
-import com.integraupt.repositorio.clsRepositorioReserva;
+import com.integraupt.repositorio.clsRepositorioBloqueHorario;
+import com.integraupt.repositorio.clsRepositorioEspacioReserva;
 import com.integraupt.repositorio.clsRepositorioHorario;
+import com.integraupt.repositorio.clsRepositorioReserva;
+import com.integraupt.repositorio.clsRepositorioUsuarioReserva;
+import java.text.Normalizer;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import java.text.Normalizer;
-import java.util.regex.Pattern;
-import java.time.format.TextStyle;
-import java.time.LocalDate;
 
 /**
  * Servicio de negocio para la administración de reservas.
@@ -36,11 +42,20 @@ public class clsServicioReserva {
 
     private final clsRepositorioReserva repositorioReserva;
     private final clsRepositorioHorario repositorioHorario;
+    private final clsRepositorioUsuarioReserva repositorioUsuarioReserva;
+    private final clsRepositorioEspacioReserva repositorioEspacioReserva;
+    private final clsRepositorioBloqueHorario repositorioBloqueHorario;
 
     public clsServicioReserva(clsRepositorioReserva repositorioReserva,
-                              clsRepositorioHorario repositorioHorario) {
+                              clsRepositorioHorario repositorioHorario,
+                              clsRepositorioUsuarioReserva repositorioUsuarioReserva,
+                              clsRepositorioEspacioReserva repositorioEspacioReserva,
+                              clsRepositorioBloqueHorario repositorioBloqueHorario) {
         this.repositorioReserva = repositorioReserva;
         this.repositorioHorario = repositorioHorario;
+        this.repositorioUsuarioReserva = repositorioUsuarioReserva;
+        this.repositorioEspacioReserva = repositorioEspacioReserva;
+        this.repositorioBloqueHorario = repositorioBloqueHorario;
     }
 
     @Transactional(readOnly = true)
@@ -55,6 +70,69 @@ public class clsServicioReserva {
         }
         
         return reservas.stream().map(this::mapearReserva).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public clsDTOReserva crearReservaUsuario(clsDTOReservaUsuarioRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La solicitud de reserva es obligatoria");
+        }
+
+        clsEntidadUsuario_Reserva usuario = repositorioUsuarioReserva.findById(request.getUsuario())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El usuario indicado no existe"));
+
+        clsEntidadEspacio_Reserva espacio = repositorioEspacioReserva.findById(request.getEspacio())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El espacio indicado no existe"));
+
+        clsEntidadBloqueHorario bloque = repositorioBloqueHorario.findById(request.getBloque())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El bloque horario indicado no existe"));
+
+        LocalDate fechaReserva = validarFechaReserva(request.getFechaReserva());
+
+        String descripcion = request.getDescripcion() != null ? request.getDescripcion().trim() : null;
+        if (descripcion == null || descripcion.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La descripción de la reserva es obligatoria");
+        }
+
+        List<String> estadosBloqueados = List.of("Pendiente", "Aprobada");
+        boolean existeReserva = repositorioReserva.existsByEspacioAndFechaReservaAndBloqueAndEstadoIn(
+                espacio, fechaReserva, bloque, estadosBloqueados);
+        if (existeReserva) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe una reserva pendiente o aprobada para el espacio, bloque y fecha seleccionados");
+        }
+
+        clsEntidadHorario.DiaSemana diaSemanaEnum = obtenerDiaSemanaEnum(fechaReserva);
+        if (diaSemanaEnum != null) {
+            Optional<clsEntidadHorario> horario = repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
+                    espacio.getId(),
+                    bloque.getId(),
+                    diaSemanaEnum
+            );
+            if (horario.isPresent() && Boolean.TRUE.equals(horario.get().getOcupado())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "El horario seleccionado ya se encuentra ocupado");
+            }
+        }
+
+        clsEntidadReserva reserva = new clsEntidadReserva();
+        reserva.setUsuario(usuario);
+        reserva.setEspacio(espacio);
+        reserva.setBloque(bloque);
+        reserva.setFechaReserva(fechaReserva);
+        reserva.setFechaSolicitud(LocalDateTime.now());
+        reserva.setEstado("Pendiente");
+        reserva.setDescripcion(descripcion);
+
+        String motivo = request.getMotivo();
+        if (motivo != null && !motivo.isBlank()) {
+            reserva.setMotivo(motivo.trim());
+        } else {
+            reserva.setMotivo(null);
+        }
+
+        clsEntidadReserva guardada = repositorioReserva.save(reserva);
+        return mapearReserva(guardada);
     }
 
     @Transactional
@@ -112,6 +190,24 @@ public class clsServicioReserva {
                 bloque != null && bloque.getHoraFin() != null ? TIME_FORMAT.format(bloque.getHoraFin()) : null
         );
     }
+    private LocalDate validarFechaReserva(String fechaReserva) {
+        if (fechaReserva == null || fechaReserva.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de reserva es obligatoria");
+        }
+
+        try {
+            LocalDate fecha = LocalDate.parse(fechaReserva, DATE_FORMAT);
+            if (fecha.isBefore(LocalDate.now())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La fecha de reserva debe ser igual o posterior a la fecha actual");
+            }
+            return fecha;
+        } catch (DateTimeParseException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La fecha de reserva debe tener el formato yyyy-MM-dd");
+        }
+    }
+
 
     private String normalizarEstado(String estado) {
         if (estado == null || estado.trim().isEmpty()) {

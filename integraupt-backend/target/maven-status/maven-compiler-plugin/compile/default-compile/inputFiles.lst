@@ -15,6 +15,7 @@ C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioReserva.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioUsuario.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioCatalogos.java
+C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioBloqueHorario.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\config\clsConfigCors.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorAuth.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioEspacio.java
@@ -33,14 +34,17 @@ C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOHorarioRequest.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOUsuarioRequest.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioAuth.java
+C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioEspacioReserva.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadEspacio.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadReserva.java
+C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOReservaUsuarioRequest.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOCursoHorarioResponse.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\controlador\ReportesController.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOCursoHorarioRequest.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioHorario.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOLoginRequest.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorUsuario.java
+C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioUsuarioReserva.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorReserva.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadHorario.java
 C:\Users\Razse\Downloads\ProyectoII-main\ProyectoII-main\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioAuth.java
