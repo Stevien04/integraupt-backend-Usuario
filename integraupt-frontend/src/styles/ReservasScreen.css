@@ -615,4 +615,30 @@
 
 .space-y-6 > * + * {
   margin-top: 1.5rem;
+@@ -593,26 +593,83 @@
+}
+
+.reservas-availability-btn:hover {
+  background-color: #047857;
+}
+
+/* Utility classes for spacing */
+.space-y-1 > * + * {
+  margin-top: 0.25rem;
+}
+
+.space-y-2 > * + * {
+  margin-top: 0.5rem;
+}
+
+.space-y-3 > * + * {
+  margin-top: 0.75rem;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-y-6 > * + * {
+  margin-top: 1.5rem;
 }
