@@ -12,6 +12,8 @@ C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dt
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadBloqueHorario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\IntegraUPTApplication.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\config\clsConfigCors.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOReservaUsuario.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOActualizarReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadEspacio.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorReserva.java

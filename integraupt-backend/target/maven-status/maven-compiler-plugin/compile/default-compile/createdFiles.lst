@@ -5,12 +5,14 @@ com\integraupt\dto\clsDTOActualizarEstadoReserva.class
 com\integraupt\entidad\clsEntidadEspacio.class
 com\integraupt\IntegraUPTApplication.class
 com\integraupt\config\clsConfigCors.class
+com\integraupt\dto\clsDTOReservaUsuario.class
 com\integraupt\repositorio\clsRepositorioReserva.class
 com\integraupt\config\clsConfigCors$1.class
 com\integraupt\entidad\clsEntidadReserva.class
 com\integraupt\repositorio\clsRepositorioBloqueHorario.class
 com\integraupt\entidad\clsEntidadUsuario.class
 com\integraupt\servicio\clsServicioReserva$1.class
+com\integraupt\dto\clsDTOActualizarReserva.class
 com\integraupt\dto\clsDTOReserva.class
 com\integraupt\repositorio\clsRepositorioHorario.class
 com\integraupt\repositorio\clsRepositorioUsuario.class

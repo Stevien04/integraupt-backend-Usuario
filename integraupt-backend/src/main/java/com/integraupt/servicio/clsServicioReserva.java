@@ -15,6 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.integraupt.dto.clsDTOActualizarEstadoReserva;
+import com.integraupt.dto.clsDTOActualizarReserva;
+import com.integraupt.dto.clsDTOReservaUsuario;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -22,6 +25,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
 
 @Service
 public class clsServicioReserva {
@@ -46,8 +50,11 @@ public class clsServicioReserva {
         this.repositorioUsuario = repositorioUsuario;
     }
 
-    public List<clsEntidadReserva> listarReservasPorUsuario(Integer usuarioId) {
-        return repositorioReserva.findByUsuarioIdOrderByFechaReservaDesc(usuarioId);
+    public List<clsDTOReservaUsuario> listarReservasPorUsuario(Integer usuarioId) {
+        return repositorioReserva.findByUsuarioIdOrderByFechaReservaDesc(usuarioId)
+                .stream()
+                .map(reserva -> mapearReservaParaUsuario(reserva, null, null))
+                .toList();
     }
 
     public List<clsEntidadEspacio> listarEspaciosActivos() {
@@ -110,7 +117,7 @@ public class clsServicioReserva {
     }
 
     @Transactional
-    public clsEntidadReserva crearReservaParaUsuario(clsDTOReserva dto) {
+    public clsDTOReservaUsuario crearReservaParaUsuario(clsDTOReserva dto) {
         if (!repositorioUsuario.existsById(dto.getUsuarioId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El usuario indicado no existe");
         }
@@ -149,7 +156,132 @@ public class clsServicioReserva {
         reserva.setDescripcion(dto.getDescripcion());
         reserva.setMotivo(dto.getMotivo());
 
-        return repositorioReserva.save(reserva);
+        clsEntidadReserva guardada = repositorioReserva.save(reserva);
+        return mapearReservaParaUsuario(guardada, espacio, bloque);
+    }
+
+    @Transactional
+    public clsDTOReservaUsuario actualizarReservaParaUsuario(clsDTOActualizarReserva dto) {
+        if (!repositorioUsuario.existsById(dto.getUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El usuario indicado no existe");
+        }
+
+        clsEntidadReserva reserva = repositorioReserva.findById(dto.getReservaId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva indicada no existe"));
+
+        if (!Objects.equals(reserva.getUsuarioId(), dto.getUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene permisos para actualizar esta reserva");
+        }
+
+        clsEntidadEspacio espacio = repositorioEspacio.findById(dto.getEspacioId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El espacio indicado no existe"));
+
+        if (dto.getHoraInicio().isAfter(dto.getHoraFin()) || dto.getHoraInicio().equals(dto.getHoraFin())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora de inicio debe ser menor a la hora fin");
+        }
+
+        clsEntidadBloqueHorario bloque = repositorioBloqueHorario.findByHoraInicioAndHoraFinal(dto.getHoraInicio(), dto.getHoraFin())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró un bloque para el horario seleccionado"));
+
+        String diaSemana = mapearDiaSemana(dto.getFechaReserva().getDayOfWeek());
+
+        clsEntidadHorario horario = repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
+                        espacio.getIdEspacio(), bloque.getIdBloque(), diaSemana)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El bloque no está asignado al espacio en ese día"));
+
+        boolean requiereValidacionBloque = !Objects.equals(reserva.getEspacioId(), espacio.getIdEspacio()) ||
+                !Objects.equals(reserva.getBloqueId(), bloque.getIdBloque()) ||
+                !reserva.getFechaReserva().equals(dto.getFechaReserva());
+
+        if (requiereValidacionBloque) {
+            boolean bloqueOcupado = horario.isOcupado() ||
+                    repositorioReserva.existsByEspacioIdAndFechaReservaAndBloqueIdAndEstadoIn(
+                            espacio.getIdEspacio(), dto.getFechaReserva(), bloque.getIdBloque(), ESTADOS_OCUPA_BLOQUE
+                    );
+
+            if (bloqueOcupado) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El bloque seleccionado ya tiene una reserva pendiente o aprobada");
+            }
+        }
+
+        reserva.setEspacioId(espacio.getIdEspacio());
+        reserva.setBloqueId(bloque.getIdBloque());
+        reserva.setFechaReserva(dto.getFechaReserva());
+        reserva.setDescripcion(dto.getDescripcion());
+        reserva.setMotivo(dto.getMotivo());
+        reserva.setEstado("Pendiente");
+
+        clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        return mapearReservaParaUsuario(actualizada, espacio, bloque);
+    }
+
+    @Transactional
+    public clsDTOReservaUsuario actualizarEstadoReserva(clsDTOActualizarEstadoReserva dto, Integer usuarioId) {
+        clsEntidadReserva reserva = repositorioReserva.findById(dto.getReservaId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva indicada no existe"));
+
+        if (usuarioId != null && !Objects.equals(reserva.getUsuarioId(), usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene permisos para modificar esta reserva");
+        }
+
+        reserva.setEstado(dto.getEstado());
+        if (dto.getMotivo() != null && !dto.getMotivo().isBlank()) {
+            reserva.setMotivo(dto.getMotivo());
+        }
+
+        clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        return mapearReservaParaUsuario(actualizada, null, null);
+    }
+
+    public void eliminarReserva(Integer reservaId, Integer usuarioId) {
+        clsEntidadReserva reserva = repositorioReserva.findById(reservaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva indicada no existe"));
+
+        if (usuarioId != null && !Objects.equals(reserva.getUsuarioId(), usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene permisos para eliminar esta reserva");
+        }
+
+        repositorioReserva.delete(reserva);
+    }
+
+    private clsDTOReservaUsuario mapearReservaParaUsuario(clsEntidadReserva reserva,
+                                                          clsEntidadEspacio espacio,
+                                                          clsEntidadBloqueHorario bloque) {
+        clsDTOReservaUsuario dto = new clsDTOReservaUsuario();
+        dto.setIdReserva(reserva.getIdReserva());
+        dto.setUsuarioId(reserva.getUsuarioId());
+        dto.setEstado(reserva.getEstado());
+        dto.setFechaReserva(reserva.getFechaReserva());
+        dto.setFechaSolicitud(reserva.getFechaSolicitud());
+        dto.setDescripcion(reserva.getDescripcion());
+        dto.setMotivo(reserva.getMotivo());
+
+        if (espacio == null) {
+            espacio = repositorioEspacio.findById(reserva.getEspacioId()).orElse(null);
+        }
+
+        if (espacio != null) {
+            dto.setEspacioId(espacio.getIdEspacio());
+            dto.setEspacioNombre(espacio.getNombre());
+            dto.setEspacioCodigo(espacio.getCodigo());
+        } else {
+            dto.setEspacioId(reserva.getEspacioId());
+        }
+
+        if (bloque == null) {
+            bloque = repositorioBloqueHorario.findById(reserva.getBloqueId()).orElse(null);
+        }
+
+        if (bloque != null) {
+            dto.setBloqueId(bloque.getIdBloque());
+            dto.setBloqueNombre(bloque.getNombre());
+            dto.setHoraInicio(bloque.getHoraInicio());
+            dto.setHoraFin(bloque.getHoraFinal());
+        } else {
+            dto.setBloqueId(reserva.getBloqueId());
+        }
+
+        return dto;
     }
 
     private String mapearDiaSemana(DayOfWeek dia) {
