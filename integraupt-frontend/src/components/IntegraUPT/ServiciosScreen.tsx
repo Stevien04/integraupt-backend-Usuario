@@ -1,35 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigation } from './Navigation';
-import { Calendar, Clock, MapPin, Search, Plus, Edit, Trash2, X, Check, Server, Monitor, MessageCircle, ArrowLeft, Heart, Brain, Users as UsersIcon, BookOpen, Eye, Building2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Search, Plus, Edit, Trash2, X, Check, Server, Monitor, MessageCircle, ArrowLeft, Eye, Building2, BookOpen, Users as UsersIcon } from 'lucide-react';
 import './../../styles/ServiciosScreen.css';
+import { espaciosService } from './services/espaciosService';
+import { reservasService } from './services/reservasService';
+import { horariosService } from './services/horariosService';
+import { serviciosScreenService } from './services/serviciosScreenService';
 
-interface Espacio {
-  id: string;
-  name: string;
-  tipo: 'Aula' | 'Laboratorio';
-  facultad: string;
-  escuela: string;
-  location: string;
-  capacity: string;
-  resources: string;
-  status: 'Disponible' | 'En Mantenimiento';
-}
 
-interface Reservation {
-  id: string;
-  type: 'laboratorio' | 'aula' | 'psicologia';
-  resource: string;
-  resourceId?: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: 'active' | 'pending' | 'cancelled' | 'approved';
-  motivo?: string;
-  ciclo?: string;
-  curso?: string;
-  solicitante?: string;
-  solicitanteEmail?: string;
-}
+import type { Espacio, Reservacion } from './types';
 
 interface HorarioCurso {
   id: string;
@@ -67,39 +46,17 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [selectedService, setSelectedService] = useState<'menu' | 'espacios' | 'citas'>('menu');
   const [view, setView] = useState<'list' | 'new' | 'edit' | 'espacios-grid' | 'horario-semanal' | 'reservar-espacio'>('list');
   const [selectedEspacio, setSelectedEspacio] = useState<Espacio | null>(null);
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [selectedReservacion, setSelectedReservacion] = useState<Reservacion | null>(null);
   const [showReservaModal, setShowReservaModal] = useState(false);
   const [espacioToReserve, setEspacioToReserve] = useState<Espacio | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Espacios disponibles
-  const [espacios] = useState<Espacio[]>([
-    { id: '1', name: 'LAB-01', tipo: 'Laboratorio', facultad: 'Ingeniería', escuela: 'Sistemas', location: 'Edificio A - Piso 2', capacity: '30', resources: 'Proyector, Pizarra Digital', status: 'Disponible' },
-    { id: '2', name: 'LAB-02', tipo: 'Laboratorio', facultad: 'Ingeniería', escuela: 'Sistemas', location: 'Edificio A - Piso 3', capacity: '25', resources: 'Proyector', status: 'Disponible' },
-    { id: '3', name: 'Aula A-301', tipo: 'Aula', facultad: 'Ingeniería', escuela: 'Civil', location: 'Edificio A - Piso 3', capacity: '45', resources: 'Proyector', status: 'Disponible' },
-    { id: '4', name: 'Aula B-201', tipo: 'Aula', facultad: 'Ingeniería', escuela: 'Industrial', location: 'Edificio B - Piso 2', capacity: '50', resources: 'Proyector, Pizarra', status: 'Disponible' },
-    { id: '5', name: 'LAB-03', tipo: 'Laboratorio', facultad: 'Ingeniería', escuela: 'Electrónica', location: 'Edificio B - Piso 1', capacity: '40', resources: 'Proyector, Pizarra Digital, Audio', status: 'En Mantenimiento' },
-  ]);
-
-  // Horarios de cursos por espacio (para la vista semanal)
-  const [horariosEspacios] = useState<Record<string, HorarioCurso[]>>({
-    '1': [ // LAB-01
-      { id: '1', curso: 'Programación Avanzada', profesor: 'Ing. López', startTime: '10:00', endTime: '11:40', days: 'Mar-Jue', students: '38' },
-      { id: '2', curso: 'Base de Datos II', profesor: 'Ing. Torres', startTime: '14:00', endTime: '15:40', days: 'Lun-Mié', students: '32' },
-    ],
-    '2': [ // LAB-02
-      { id: '3', curso: 'Redes y Comunicaciones', profesor: 'Ing. Pérez', startTime: '08:00', endTime: '09:40', days: 'Mar-Jue', students: '28' },
-      { id: '4', curso: 'Inteligencia Artificial', profesor: 'Dr. Ramírez', startTime: '16:00', endTime: '17:40', days: 'Lun-Mié-Vie', students: '25' },
-    ],
-    '3': [ // Aula A-301
-      { id: '5', curso: 'Matemáticas III', profesor: 'Dr. García', startTime: '08:00', endTime: '09:40', days: 'Lun-Mié-Vie', students: '45' },
-      { id: '6', curso: 'Física II', profesor: 'Dra. Sánchez', startTime: '12:00', endTime: '13:40', days: 'Mar-Jue', students: '42' },
-    ],
-    '4': [ // Aula B-201
-      { id: '7', curso: 'Cálculo II', profesor: 'Dr. Ramírez', startTime: '14:00', endTime: '15:40', days: 'Lun-Mié-Vie', students: '50' },
-      { id: '8', curso: 'Estadística', profesor: 'Ing. Castro', startTime: '10:00', endTime: '11:40', days: 'Mar-Jue-Sáb', students: '48' },
-    ],
-  });
-
+  // Estados para datos reales
+  const [espacios, setEspacios] = useState<Espacio[]>([]);
+  const [reservacionesEspacios, setReservacionesEspacios] = useState<Reservacion[]>([]);
+  const [horariosEspacios, setHorariosEspacios] = useState<Record<string, HorarioCurso[]>>({});
+  const [horariosCargando, setHorariosCargando] = useState(false);
   // Estado para formulario de reserva de espacios
   const [espaciosForm, setEspaciosForm] = useState({
     type: 'laboratorio' as 'laboratorio' | 'aula',
@@ -128,34 +85,8 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     motivo: ''
   });
 
-  // Reservas de espacios
-  const [reservationsEspacios, setReservationsEspacios] = useState<Reservation[]>([
-    {
-      id: '1',
-      type: 'laboratorio',
-      resource: 'LAB-01',
-      date: '2025-10-10',
-      startTime: '10:00',
-      endTime: '12:00',
-      status: 'active',
-      ciclo: 'VI',
-      curso: 'Programación Avanzada'
-    },
-    {
-      id: '2',
-      type: 'aula',
-      resource: 'Aula A-301',
-      date: '2025-10-11',
-      startTime: '14:00',
-      endTime: '16:00',
-      status: 'active',
-      ciclo: 'IV',
-      curso: 'Cálculo II'
-    }
-  ]);
-
-  // Citas de psicología
-  const [citasPsicologia, setCitasPsicologia] = useState<Reservation[]>([
+  // Citas de psicología (mantenemos datos mock por ahora)
+  const [citasPsicologia, setCitasPsicologia] = useState<Reservacion[]>([
     {
       id: '3',
       type: 'psicologia',
@@ -168,28 +99,96 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     }
   ]);
 
-  const handleCreateEspacio = () => {
-    const newReservation: Reservation = {
-      id: Date.now().toString(),
-      type: espaciosForm.type,
-      resource: espaciosForm.resource,
-      date: espaciosForm.date,
-      startTime: espaciosForm.startTime,
-      endTime: espaciosForm.endTime,
-      ciclo: espaciosForm.ciclo,
-      curso: espaciosForm.curso,
-      status: 'pending',
-      solicitante: user.user_metadata.name,
-      solicitanteEmail: user.email
-    };
+  // Cargar datos reales al montar el componente
+  useEffect(() => {
+    cargarEspacios();
+    cargarReservaciones();
+  }, []);
+
+  const cargarEspacios = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    const espaciosBD = await espaciosService.getAllEspacios();
     
-    // Guardar en localStorage para que el admin pueda verla
-    const reservasPendientes = JSON.parse(localStorage.getItem('reservas_pendientes') || '[]');
-    localStorage.setItem('reservas_pendientes', JSON.stringify([...reservasPendientes, newReservation]));
+    // Mapear datos de BD a formato del frontend
+    const espaciosMapeados: Espacio[] = espaciosBD.map(espacioBD => ({
+      id: espacioBD.id.toString(),
+      codigo: espacioBD.codigo,
+      nombre: espacioBD.nombre,
+      ubicacion: espacioBD.ubicacion || 'Ubicación no especificada',
+      tipo: espaciosService.getTipoFrontend(espacioBD.tipo),
+      capacidad: espacioBD.capacidad,
+      equipamiento: espacioBD.equipamiento || 'Equipamiento no especificado',
+      facultad: espacioBD.facultad,
+      escuela: espacioBD.escuela,
+      estado: espaciosService.getEstadoTexto(espacioBD.estado)
+    }));
     
-    setReservationsEspacios([...reservationsEspacios, newReservation]);
-    setEspaciosForm({ type: 'laboratorio', resource: '', date: '', startTime: '', endTime: '', ciclo: '', curso: '' });
-    setView('list');
+    setEspacios(espaciosMapeados);
+  } catch (err) {
+    setError('Error al cargar los espacios');
+    console.error('Error cargando espacios:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const cargarReservaciones = async () => {
+    try {
+      const reservasBD = await reservasService.getReservasPorEstado();
+      
+      // Mapear reservas de BD a formato del frontend
+      const reservasMapeadas = reservasBD.map(reservaBD => 
+        reservasService.mapearReservaFrontend(reservaBD)
+      );
+      
+      setReservacionesEspacios(reservasMapeadas);
+    } catch (err) {
+      console.error('Error cargando reservaciones:', err);
+    }
+  };
+
+  const handleCreateEspacio = async () => {
+    try {
+      setLoading(true);
+      
+      // Crear la descripción con ciclo y curso
+      const descripcion = `Ciclo: ${espaciosForm.ciclo} - Curso: ${espaciosForm.curso}`;
+      
+      // Buscar el espacio seleccionado para obtener su ID
+      const espacioSeleccionado = espacios.find(e => e.nombre === espaciosForm.resource);
+      
+      if (!espacioSeleccionado) {
+        throw new Error('Espacio no encontrado');
+      }
+
+      // Preparar datos para la API
+      const reservaData = {
+        usuario: parseInt(user.id),
+        espacio: parseInt(espacioSeleccionado.id),
+        fechaReserva: espaciosForm.date,
+        bloque: 10, // Por defecto, necesitarías mapear el horario
+        descripcion: descripcion
+      };
+
+      // Enviar a la API
+      await reservasService.crearReserva(reservaData);
+      
+      // Recargar reservaciones
+      await cargarReservaciones();
+      
+      setEspaciosForm({ type: 'laboratorio', resource: '', date: '', startTime: '', endTime: '', ciclo: '', curso: '' });
+      setView('list');
+      
+      alert('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
+      
+    } catch (err) {
+      setError('Error al crear la reserva');
+      console.error('Error creando reserva:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReservarEspacio = (espacio: Espacio) => {
@@ -205,35 +204,43 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     setShowReservaModal(true);
   };
 
-  const handleSubmitReservaRapida = () => {
+  const handleSubmitReservaRapida = async () => {
     if (!espacioToReserve) return;
 
-    const newReservation: Reservation = {
-      id: Date.now().toString(),
-      type: espacioToReserve.tipo === 'Laboratorio' ? 'laboratorio' : 'aula',
-      resource: espacioToReserve.name,
-      resourceId: espacioToReserve.id,
-      date: reservaRapidaForm.date,
-      startTime: reservaRapidaForm.startTime,
-      endTime: reservaRapidaForm.endTime,
-      ciclo: reservaRapidaForm.ciclo,
-      curso: reservaRapidaForm.curso,
-      motivo: reservaRapidaForm.motivo,
-      status: 'pending',
-      solicitante: user.user_metadata.name,
-      solicitanteEmail: user.email
-    };
-    
-    // Guardar en localStorage para que el admin pueda verla
-    const reservasPendientes = JSON.parse(localStorage.getItem('reservas_pendientes') || '[]');
-    localStorage.setItem('reservas_pendientes', JSON.stringify([...reservasPendientes, newReservation]));
-    
-    setReservationsEspacios([...reservationsEspacios, newReservation]);
-    setShowReservaModal(false);
-    setEspacioToReserve(null);
-    
-    // Mostrar mensaje de éxito
-    alert('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
+    try {
+      setLoading(true);
+      
+      // Crear la descripción con ciclo y curso
+      const descripcion = `Ciclo: ${reservaRapidaForm.ciclo} - Curso: ${reservaRapidaForm.curso} - ${reservaRapidaForm.motivo || 'Sin descripción adicional'}`;
+      
+      // Preparar datos para la API
+      const reservaData = {
+        usuario: parseInt(user.id),
+        espacio: parseInt(espacioToReserve.id),
+        fechaReserva: reservaRapidaForm.date,
+        bloque: 10, // Necesitarías mapear el horario a un bloque ID
+        descripcion: descripcion,
+        motivo: reservaRapidaForm.motivo
+      };
+
+      // Enviar a la API
+      await reservasService.crearReserva(reservaData);
+      
+      // Recargar reservaciones
+      await cargarReservaciones();
+      
+      setShowReservaModal(false);
+      setEspacioToReserve(null);
+      
+      // Mostrar mensaje de éxito
+      alert('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
+      
+    } catch (err) {
+      setError('Error al crear la reserva');
+      console.error('Error creando reserva:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateCita = () => {
@@ -243,7 +250,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     const endHours = hours + Math.floor(endMinutes / 60);
     const endTime = `${endHours.toString().padStart(2, '0')}:${(endMinutes % 60).toString().padStart(2, '0')}`;
 
-    const newCita: Reservation = {
+    const newCita: Reservacion = {
       id: Date.now().toString(),
       type: 'psicologia',
       resource: 'Orientación Psicológica',
@@ -259,10 +266,10 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     setSelectedService('menu');
   };
 
-  const handleCancelReservation = (id: string, type: 'espacios' | 'citas') => {
+  const handleCancelReservacion = (id: string, type: 'espacios' | 'citas') => {
     if (window.confirm('¿Estás seguro de cancelar esta reserva?')) {
       if (type === 'espacios') {
-        setReservationsEspacios(reservationsEspacios.map(r => 
+        setReservacionesEspacios(reservacionesEspacios.map(r => 
           r.id === id ? { ...r, status: 'cancelled' as const } : r
         ));
       } else {
@@ -273,19 +280,79 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     }
   };
 
-  const handleDeleteReservation = (id: string, type: 'espacios' | 'citas') => {
+  const handleDeleteReservacion = (id: string, type: 'espacios' | 'citas') => {
     if (window.confirm('¿Estás seguro de eliminar esta reserva?')) {
       if (type === 'espacios') {
-        setReservationsEspacios(reservationsEspacios.filter(r => r.id !== id));
+        setReservacionesEspacios(reservacionesEspacios.filter(r => r.id !== id));
       } else {
         setCitasPsicologia(citasPsicologia.filter(r => r.id !== id));
       }
     }
   };
 
-  const handleVerHorario = (espacio: Espacio) => {
-    setSelectedEspacio(espacio);
-    setView('horario-semanal');
+  const handleVerHorario = async (espacio: Espacio) => {
+    try {
+      setHorariosCargando(true);
+      setSelectedEspacio(espacio);
+      
+      console.log('Cargando horarios para espacio:', espacio);
+      
+      // Usar el NUEVO servicio especializado
+      const horariosCompletos = await serviciosScreenService.getHorariosCompletosPorEspacio(parseInt(espacio.id));
+      
+      console.log('Horarios completos recibidos:', horariosCompletos);
+      
+      // Mapear a formato para la tabla
+      const horariosMapeados: Record<string, HorarioCurso[]> = {};
+      horariosMapeados[espacio.id] = [];
+      
+      // Solo horarios ocupados con cursos
+      horariosCompletos
+        .filter(horario => horario.ocupado && horario.curso)
+        .forEach(horario => {
+          horariosMapeados[espacio.id].push({
+            id: horario.id,
+            curso: horario.curso!,
+            profesor: horario.docente || 'Docente no asignado',
+            startTime: horario.horaInicio,
+            endTime: horario.horaFinal,
+            days: horario.diaSemana,
+            students: '25'
+          });
+        });
+      
+      console.log('Horarios finales para tabla:', horariosMapeados);
+      setHorariosEspacios(horariosMapeados);
+      setView('horario-semanal');
+      
+    } catch (error) {
+      console.error('Error cargando horarios:', error);
+      setHorariosEspacios({});
+      setView('horario-semanal');
+    } finally {
+      setHorariosCargando(false);
+    }
+  };
+
+// Función simple para encontrar coincidencias
+const cursoCoincideConHorario = (curso: any, horario: any): boolean => {
+  // Lógica básica - ajustar según tu BD
+  return curso.dias.includes(horario.diaSemana.substring(0, 3));
+};
+
+  // Función para extraer startTime y endTime del string de horario
+  const extraerInfoHorario = (horarioString: string): { startTime: string, endTime: string } => {
+    if (!horarioString) {
+      return { startTime: '08:00', endTime: '09:40' }; // Default
+    }
+    
+    // Ejemplo: "09:40 - 10:30" -> startTime: "09:40", endTime: "10:30"
+    const partes = horarioString.split(' - ');
+    if (partes.length === 2) {
+      return { startTime: partes[0].trim(), endTime: partes[1].trim() };
+    }
+    
+    return { startTime: '08:00', endTime: '09:40' }; // Fallback
   };
 
   const getStatusColor = (status: string) => {
@@ -293,6 +360,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
       case 'active': return 'servicios-status-active';
       case 'pending': return 'servicios-status-pending';
       case 'cancelled': return 'servicios-status-cancelled';
+      case 'approved': return 'servicios-status-approved';
       default: return 'servicios-status-default';
     }
   };
@@ -302,6 +370,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
       case 'active': return 'Activa';
       case 'pending': return 'Pendiente';
       case 'cancelled': return 'Cancelada';
+      case 'approved': return 'Aprobada';
       default: return status;
     }
   };
@@ -358,15 +427,55 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     const horarios = horariosEspacios[selectedEspacio.id] || [];
     const [slotStart] = timeSlot.split('-');
     
+    console.log('Buscando curso para:', day, slotStart, 'Horarios disponibles:', horarios);
+    
     for (const horario of horarios) {
-      if (horario.days.includes(day)) {
+      // Verificar si el curso se imparte en este día
+      const diasCurso = horario.days ? horario.days.split('-') : [horario.days];
+      
+      // Convertir día abreviado a formato completo para comparar
+      const diaCompletoMap: Record<string, string> = {
+        'Lun': 'Lunes',
+        'Mar': 'Martes',
+        'Mié': 'Miercoles', 
+        'Jue': 'Jueves',
+        'Vie': 'Viernes',
+        'Sáb': 'Sabado'
+      };
+      const diaCompleto = diaCompletoMap[day] || day;
+      
+      // Verificar si alguno de los días del curso coincide
+      const coincideDia = diasCurso.some(diaCurso => {
+        const diaCursoCompleto = diaCompletoMap[diaCurso] || diaCurso;
+        return diaCursoCompleto === diaCompleto;
+      });
+      
+      console.log('Curso:', horario.curso, 'Días del curso:', diasCurso, 'Día buscado:', diaCompleto, 'Coincide:', coincideDia);
+      
+      if (coincideDia) {
         // Verificar si el slot está dentro del rango del curso
         if (slotStart >= horario.startTime && slotStart < horario.endTime) {
+          console.log('✅ Curso encontrado:', horario.curso);
           return horario;
         }
       }
     }
+    
+    console.log('❌ No se encontró curso para', day, slotStart);
     return null;
+  };
+
+  // Función auxiliar para convertir abreviación a día completo
+  const getDiaCompleto = (diaAbrev: string): string => {
+    const diasMap: Record<string, string> = {
+      'Lun': 'Lunes',
+      'Mar': 'Martes',
+      'Mié': 'Miercoles', 
+      'Jue': 'Jueves',
+      'Vie': 'Viernes',
+      'Sáb': 'Sabado'
+    };
+    return diasMap[diaAbrev] || diaAbrev;
   };
 
   return (
@@ -379,8 +488,24 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
       />
       
       <main className="servicios-main">
+        {/* Mostrar estado de carga o error */}
+        {loading && (
+          <div className="servicios-loading">
+            Cargando...
+          </div>
+        )}
+        
+        {error && (
+          <div className="servicios-error">
+            {error}
+            <button onClick={cargarEspacios} className="servicios-retry-btn">
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {/* Menú Principal de Servicios */}
-        {selectedService === 'menu' && (
+        {selectedService === 'menu' && !loading && !error && (
           <div>
             <div className="servicios-header">
               <h1 className="servicios-title">Servicios</h1>
@@ -436,7 +561,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
         )}
 
         {/* Vista de Grid de Espacios (para usuarios académicos) */}
-        {selectedService === 'espacios' && view === 'espacios-grid' && (
+        {selectedService === 'espacios' && view === 'espacios-grid' && !loading && !error && (
           <div>
             <button
               onClick={() => setSelectedService('menu')}
@@ -456,7 +581,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                 <div
                   key={espacio.id}
                   className={`servicios-espacio-card ${
-                    espacio.status === 'Disponible' 
+                    espacio.estado === 'Disponible' 
                       ? 'servicios-espacio-disponible' 
                       : 'servicios-espacio-mantenimiento'
                   }`}
@@ -471,7 +596,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                         {espacio.tipo === 'Laboratorio' ? <Server className="servicios-espacio-icon-svg" /> : <Monitor className="servicios-espacio-icon-svg" />}
                       </div>
                       <div>
-                        <h3 className="servicios-espacio-name">{espacio.name}</h3>
+                        <h3 className="servicios-espacio-name">{espacio.nombre}</h3>
                         <span className={`servicios-espacio-tipo ${
                           espacio.tipo === 'Laboratorio' 
                             ? 'servicios-espacio-tipo-lab' 
@@ -494,27 +619,27 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                     </div>
                     <div className="servicios-espacio-detail">
                       <MapPin className="servicios-espacio-detail-icon" />
-                      <span>{espacio.location}</span>
+                      <span>{espacio.ubicacion}</span>
                     </div>
                     <div className="servicios-espacio-detail">
                       <UsersIcon className="servicios-espacio-detail-icon" />
-                      <span>Capacidad: {espacio.capacity}</span>
+                      <span>Capacidad: {espacio.capacidad}</span>
                     </div>
                   </div>
 
                   <div className="servicios-espacio-recursos">
                     <p className="servicios-espacio-recursos-label">Recursos:</p>
-                    <p className="servicios-espacio-recursos-text">{espacio.resources}</p>
+                    <p className="servicios-espacio-recursos-text">{espacio.equipamiento}</p>
                   </div>
 
                   <div className="servicios-espacio-actions">
                     <div className="servicios-espacio-status-container">
                       <span className={`servicios-espacio-status ${
-                        espacio.status === 'Disponible' 
+                        espacio.estado === 'Disponible' 
                           ? 'servicios-espacio-status-disponible' 
                           : 'servicios-espacio-status-mantenimiento'
                       }`}>
-                        {espacio.status}
+                        {espacio.estado}
                       </span>
 
                       <button
@@ -526,7 +651,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       </button>
                     </div>
                     
-                    {espacio.status === 'Disponible' && (
+                    {espacio.estado === 'Disponible' && (
                       <button
                         onClick={() => handleReservarEspacio(espacio)}
                         className="servicios-espacio-btn servicios-espacio-btn-reservar"
@@ -556,7 +681,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
             <div className="servicios-espacio-info-card">
               <div className="servicios-espacio-info-header">
                 <div>
-                  <h1 className="servicios-espacio-info-title">{selectedEspacio.name}</h1>
+                  <h1 className="servicios-espacio-info-title">{selectedEspacio.nombre}</h1>
                   <div className="servicios-espacio-info-badges">
                     <span className={`servicios-espacio-info-badge ${
                       selectedEspacio.tipo === 'Laboratorio' 
@@ -569,7 +694,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       {selectedEspacio.facultad} - {selectedEspacio.escuela}
                     </span>
                     <span className="servicios-espacio-info-badge servicios-espacio-info-badge-capacidad">
-                      Capacidad: {selectedEspacio.capacity}
+                      Capacidad: {selectedEspacio.capacidad}
                     </span>
                   </div>
                 </div>
@@ -581,69 +706,79 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
               <h3 className="servicios-horario-title">
                 <Clock className="servicios-horario-title-icon" />
                 Horario Semanal (Bloques de 50 minutos)
+                {horariosCargando && <span className="servicios-loading-text">Cargando horarios...</span>}
               </h3>
               
-              <div className="servicios-horario-table-container">
-                <table className="servicios-horario-table">
-                  <thead>
-                    <tr className="servicios-horario-header">
-                      <th className="servicios-horario-th servicios-horario-time-header">
-                        Horario
-                      </th>
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((day) => (
-                        <th key={day} className="servicios-horario-th">
-                          {day}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {timeSlots.map((timeSlot) => (
-                      <tr key={timeSlot} className="servicios-horario-row">
-                        <td className="servicios-horario-time">
-                          {timeSlot}
-                        </td>
-                        {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => {
-                          const curso = getCursoInSlot(day, timeSlot);
-                          return (
-                            <td
-                              key={day}
-                              className={`servicios-horario-cell ${
-                                curso 
-                                  ? 'servicios-horario-cell-ocupado' 
-                                  : 'servicios-horario-cell-disponible'
-                              }`}
-                            >
-                              {curso ? (
-                                <div className="servicios-horario-curso">
-                                  <div className="servicios-horario-curso-nombre">{curso.curso}</div>
-                                  <div className="servicios-horario-curso-profesor">{curso.profesor}</div>
-                                  <div className="servicios-horario-curso-estudiantes">{curso.students} estudiantes</div>
-                                </div>
-                              ) : (
-                                <div className="servicios-horario-vacio">Disponible</div>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {horariosCargando ? (
+              <div className="servicios-horario-loading">
+                <div className="servicios-loading-spinner"></div>
+                <p>Cargando horarios del espacio...</p>
               </div>
+              ) : (
+              <>
+                <div className="servicios-horario-table-container">
+                  <table className="servicios-horario-table">
+                    <thead>
+                      <tr className="servicios-horario-header">
+                        <th className="servicios-horario-th servicios-horario-time-header">
+                          Horario
+                        </th>
+                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((day) => (
+                          <th key={day} className="servicios-horario-th">
+                            {day}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timeSlots.map((timeSlot) => (
+                        <tr key={timeSlot} className="servicios-horario-row">
+                          <td className="servicios-horario-time">
+                            {timeSlot}
+                          </td>
+                          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => {
+                            const curso = getCursoInSlot(day, timeSlot);
+                            return (
+                              <td
+                                key={day}
+                                className={`servicios-horario-cell ${
+                                  curso 
+                                    ? 'servicios-horario-cell-ocupado' 
+                                    : 'servicios-horario-cell-disponible'
+                                }`}
+                              >
+                                {curso ? (
+                                  <div className="servicios-horario-curso">
+                                    <div className="servicios-horario-curso-nombre">{curso.curso}</div>
+                                    <div className="servicios-horario-curso-profesor">{curso.profesor}</div>
+                                    <div className="servicios-horario-curso-estudiantes">{curso.students} estudiantes</div>
+                                  </div>
+                                ) : (
+                                  <div className="servicios-horario-vacio">Disponible</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <div className="servicios-horario-leyenda">
-                <div className="servicios-horario-leyenda-items">
-                  <div className="servicios-horario-leyenda-item">
-                    <div className="servicios-horario-leyenda-color servicios-horario-leyenda-ocupado"></div>
-                    <span className="servicios-horario-leyenda-text">Ocupado</span>
-                  </div>
-                  <div className="servicios-horario-leyenda-item">
-                    <div className="servicios-horario-leyenda-color servicios-horario-leyenda-disponible"></div>
-                    <span className="servicios-horario-leyenda-text">Disponible</span>
+                <div className="servicios-horario-leyenda">
+                  <div className="servicios-horario-leyenda-items">
+                    <div className="servicios-horario-leyenda-item">
+                      <div className="servicios-horario-leyenda-color servicios-horario-leyenda-ocupado"></div>
+                      <span className="servicios-horario-leyenda-text">Ocupado</span>
+                    </div>
+                    <div className="servicios-horario-leyenda-item">
+                      <div className="servicios-horario-leyenda-color servicios-horario-leyenda-disponible"></div>
+                      <span className="servicios-horario-leyenda-text">Disponible</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -681,7 +816,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
               </button>
             </div>
 
-            {reservationsEspacios.length === 0 ? (
+            {reservacionesEspacios.length === 0 ? (
               <div className="servicios-empty">
                 <Server className="servicios-empty-icon" />
                 <h3 className="servicios-empty-title">No hay reservas de espacios</h3>
@@ -695,52 +830,53 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
               </div>
             ) : (
               <div className="servicios-reservas-grid">
-                {reservationsEspacios.map((reservation) => (
+                {reservacionesEspacios.map((reservacion) => (
                   <div
-                    key={reservation.id}
+                    key={reservacion.id}
                     className={`servicios-reserva-card ${
-                      reservation.status === 'active' ? 'servicios-reserva-active' :
-                      reservation.status === 'pending' ? 'servicios-reserva-pending' : 'servicios-reserva-cancelled'
+                      reservacion.status === 'active' ? 'servicios-reserva-active' :
+                      reservacion.status === 'pending' ? 'servicios-reserva-pending' : 
+                      reservacion.status === 'approved' ? 'servicios-reserva-approved' : 'servicios-reserva-cancelled'
                     }`}
                   >
                     <div className="servicios-reserva-header">
                       <div className="servicios-reserva-type">
-                        {getTypeIcon(reservation.type)}
-                        <h3 className="servicios-reserva-type-label">{getTypeLabel(reservation.type)}</h3>
+                        {getTypeIcon(reservacion.type)}
+                        <h3 className="servicios-reserva-type-label">{getTypeLabel(reservacion.type)}</h3>
                       </div>
-                      <span className={`servicios-reserva-status ${getStatusColor(reservation.status)}`}>
-                        {getStatusLabel(reservation.status)}
+                      <span className={`servicios-reserva-status ${getStatusColor(reservacion.status)}`}>
+                        {getStatusLabel(reservacion.status)}
                       </span>
                     </div>
                     
                     <div className="servicios-reserva-details">
                       <div className="servicios-reserva-detail">
                         <MapPin className="servicios-reserva-detail-icon" />
-                        {reservation.resource}
+                        {reservacion.resource}
                       </div>
                       <div className="servicios-reserva-detail">
                         <Calendar className="servicios-reserva-detail-icon" />
-                        {new Date(reservation.date).toLocaleDateString('es-ES')}
+                        {new Date(reservacion.date).toLocaleDateString('es-ES')}
                       </div>
                       <div className="servicios-reserva-detail">
                         <Clock className="servicios-reserva-detail-icon" />
-                        {reservation.startTime} - {reservation.endTime}
+                        {reservacion.startTime} - {reservacion.endTime}
                       </div>
-                      {reservation.ciclo && (
+                      {reservacion.ciclo && (
                         <div className="servicios-reserva-info servicios-reserva-info-ciclo">
-                          <strong>Ciclo:</strong> {reservation.ciclo}
+                          <strong>Ciclo:</strong> {reservacion.ciclo}
                         </div>
                       )}
-                      {reservation.curso && (
+                      {reservacion.curso && (
                         <div className="servicios-reserva-info servicios-reserva-info-curso">
-                          <strong>Curso:</strong> {reservation.curso}
+                          <strong>Curso:</strong> {reservacion.curso}
                         </div>
                       )}
                     </div>
 
-                    {reservation.status !== 'cancelled' && (
+                    {reservacion.status !== 'cancelled' && (
                       <button
-                        onClick={() => handleCancelReservation(reservation.id, 'espacios')}
+                        onClick={() => handleCancelReservacion(reservacion.id, 'espacios')}
                         className="servicios-reserva-action servicios-reserva-action-cancel"
                       >
                         <Trash2 className="servicios-reserva-action-icon" />
@@ -748,9 +884,9 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       </button>
                     )}
 
-                    {reservation.status === 'cancelled' && (
+                    {reservacion.status === 'cancelled' && (
                       <button
-                        onClick={() => handleDeleteReservation(reservation.id, 'espacios')}
+                        onClick={() => handleDeleteReservacion(reservacion.id, 'espacios')}
                         className="servicios-reserva-action servicios-reserva-action-delete"
                       >
                         <Trash2 className="servicios-reserva-action-icon" />
@@ -805,7 +941,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                   {espacios
                     .filter(e => e.tipo === (espaciosForm.type === 'laboratorio' ? 'Laboratorio' : 'Aula'))
                     .map(e => (
-                      <option key={e.id} value={e.name}>{e.name} - {e.location}</option>
+                      <option key={e.id} value={e.nombre}>{e.nombre} - {e.ubicacion}</option>
                     ))}
                 </select>
               </div>
@@ -878,14 +1014,16 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                 <button
                   type="submit"
                   className="servicios-form-btn servicios-form-btn-primary"
+                  disabled={loading}
                 >
                   <Check className="servicios-form-btn-icon" />
-                  Crear Reserva
+                  {loading ? 'Creando...' : 'Crear Reserva'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setView('list')}
                   className="servicios-form-btn servicios-form-btn-secondary"
+                  disabled={loading}
                 >
                   Cancelar
                 </button>
@@ -894,20 +1032,19 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
           </div>
         )}
 
-     
-
         {/* Modal de Reserva Rápida desde Card */}
         {showReservaModal && espacioToReserve && (
           <div className="servicios-modal-overlay">
             <div className="servicios-modal">
               <div className="servicios-modal-header servicios-modal-header-success">
                 <div>
-                  <h3 className="servicios-modal-title">Reservar {espacioToReserve.name}</h3>
+                  <h3 className="servicios-modal-title">Reservar {espacioToReserve.nombre}</h3>
                   <p className="servicios-modal-subtitle">{espacioToReserve.tipo} - {espacioToReserve.facultad}</p>
                 </div>
                 <button 
                   onClick={() => setShowReservaModal(false)} 
                   className="servicios-modal-close"
+                  disabled={loading}
                 >
                   <X className="servicios-modal-close-icon" />
                 </button>
@@ -916,7 +1053,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
               <form onSubmit={(e) => { e.preventDefault(); handleSubmitReservaRapida(); }} className="servicios-modal-form">
                 <div className="servicios-modal-info">
                   <p className="servicios-modal-info-text">
-                    <strong>Información del espacio:</strong> {espacioToReserve.location} | Capacidad: {espacioToReserve.capacity}
+                    <strong>Información del espacio:</strong> {espacioToReserve.ubicacion} | Capacidad: {espacioToReserve.capacidad}
                   </p>
                 </div>
 
@@ -928,6 +1065,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       onChange={(e) => setReservaRapidaForm({ ...reservaRapidaForm, ciclo: e.target.value })}
                       className="servicios-form-input"
                       required
+                      disabled={loading}
                     >
                       <option value="">Selecciona ciclo</option>
                       {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'].map(c => (
@@ -945,6 +1083,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       placeholder="Ej: Programación Web"
                       className="servicios-form-input"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -958,6 +1097,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                     min={new Date().toISOString().split('T')[0]}
                     className="servicios-form-input"
                     required
+                    disabled={loading}
                   />
                 </div>
 
@@ -970,6 +1110,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       onChange={(e) => setReservaRapidaForm({ ...reservaRapidaForm, startTime: e.target.value })}
                       className="servicios-form-input"
                       required
+                      disabled={loading}
                     />
                   </div>
                   <div className="servicios-form-group">
@@ -980,6 +1121,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                       onChange={(e) => setReservaRapidaForm({ ...reservaRapidaForm, endTime: e.target.value })}
                       className="servicios-form-input"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -992,6 +1134,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                     placeholder="Describe el motivo de tu reserva..."
                     rows={3}
                     className="servicios-form-textarea"
+                    disabled={loading}
                   />
                 </div>
 
@@ -1005,14 +1148,16 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
                   <button
                     type="submit"
                     className="servicios-modal-btn servicios-modal-btn-primary"
+                    disabled={loading}
                   >
                     <Check className="servicios-modal-btn-icon" />
-                    Enviar Solicitud
+                    {loading ? 'Enviando...' : 'Enviar Solicitud'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowReservaModal(false)}
                     className="servicios-modal-btn servicios-modal-btn-secondary"
+                    disabled={loading}
                   >
                     Cancelar
                   </button>

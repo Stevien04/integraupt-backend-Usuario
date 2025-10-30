@@ -1,13 +1,6 @@
 package com.integraupt.entidad;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -20,109 +13,58 @@ public class clsEntidadReserva {
     @Column(name = "IdReserva")
     private Integer idReserva;
 
-    @Column(name = "usuario", nullable = false)
-    private Integer usuarioId;
+    @ManyToOne
+    @JoinColumn(name = "usuario", nullable = false)
+    private clsEntidadUsuario_Reserva usuario; // Cambiado a clsEntidadUsuario_Reserva
 
-    @Column(name = "espacio", nullable = false)
-    private Integer espacioId;
+    @ManyToOne
+    @JoinColumn(name = "espacio", nullable = false)
+    private clsEntidadEspacio_Reserva espacio; // Cambiado a clsEntidadEspacio_Reserva
 
-    @Column(name = "bloque", nullable = false)
-    private Integer bloqueId;
+    @ManyToOne
+    @JoinColumn(name = "bloque", nullable = false)
+    private clsEntidadBloqueHorario bloque;
 
-    @Column(name = "estado", nullable = false)
-    private String estado;
-
-    @Column(name = "fechaReserva", nullable = false)
+    @Column(name = "fechaReserva")
     private LocalDate fechaReserva;
 
-    @Column(name = "fechaSolicitud", nullable = false)
+    @Column(name = "estado")
+    private String estado;
+
+    @Column(name = "fechaSolicitud")
     private LocalDateTime fechaSolicitud;
 
-    @Column(name = "Descripcion", nullable = false)
+    @Column(name = "Descripcion")
     private String descripcion;
 
     @Column(name = "Motivo")
     private String motivo;
 
-    @PrePersist
-    public void prePersist() {
-        if (fechaSolicitud == null) {
-            fechaSolicitud = LocalDateTime.now();
-        }
-        if (estado == null || estado.isBlank()) {
-            estado = "Pendiente";
-        }
-    }
+    // Getters y Setters
+    public Integer getIdReserva() { return idReserva; }
+    public void setIdReserva(Integer idReserva) { this.idReserva = idReserva; }
 
-    public Integer getIdReserva() {
-        return idReserva;
-    }
+    public clsEntidadUsuario_Reserva getUsuario() { return usuario; } // Cambiado
+    public void setUsuario(clsEntidadUsuario_Reserva usuario) { this.usuario = usuario; } // Cambiado
 
-    public void setIdReserva(Integer idReserva) {
-        this.idReserva = idReserva;
-    }
+    public clsEntidadEspacio_Reserva getEspacio() { return espacio; } // Cambiado
+    public void setEspacio(clsEntidadEspacio_Reserva espacio) { this.espacio = espacio; } // Cambiado
 
-    public Integer getUsuarioId() {
-        return usuarioId;
-    }
+    public clsEntidadBloqueHorario getBloque() { return bloque; }
+    public void setBloque(clsEntidadBloqueHorario bloque) { this.bloque = bloque; }
 
-    public void setUsuarioId(Integer usuarioId) {
-        this.usuarioId = usuarioId;
-    }
+    public LocalDate getFechaReserva() { return fechaReserva; }
+    public void setFechaReserva(LocalDate fechaReserva) { this.fechaReserva = fechaReserva; }
 
-    public Integer getEspacioId() {
-        return espacioId;
-    }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 
-    public void setEspacioId(Integer espacioId) {
-        this.espacioId = espacioId;
-    }
+    public LocalDateTime getFechaSolicitud() { return fechaSolicitud; }
+    public void setFechaSolicitud(LocalDateTime fechaSolicitud) { this.fechaSolicitud = fechaSolicitud; }
 
-    public Integer getBloqueId() {
-        return bloqueId;
-    }
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
-    public void setBloqueId(Integer bloqueId) {
-        this.bloqueId = bloqueId;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
-
-    public LocalDate getFechaReserva() {
-        return fechaReserva;
-    }
-
-    public void setFechaReserva(LocalDate fechaReserva) {
-        this.fechaReserva = fechaReserva;
-    }
-
-    public LocalDateTime getFechaSolicitud() {
-        return fechaSolicitud;
-    }
-
-    public void setFechaSolicitud(LocalDateTime fechaSolicitud) {
-        this.fechaSolicitud = fechaSolicitud;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public String getMotivo() {
-        return motivo;
-    }
-
-    public void setMotivo(String motivo) {
-        this.motivo = motivo;
-    }
+    public String getMotivo() { return motivo; }
+    public void setMotivo(String motivo) { this.motivo = motivo; }
 }

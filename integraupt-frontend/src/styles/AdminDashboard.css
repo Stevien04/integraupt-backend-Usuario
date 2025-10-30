@@ -1880,3 +1880,247 @@
     padding: 12px 12px 12px 36px; /* Más alto para mejor touch */
   }
 }
+
+/* reportes */
+/* Contenedor del resumen */
+.admin-reports-summary {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e5e9;
+}
+
+.admin-reports-summary-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-reports-summary-title::before {
+  content: "📊";
+  font-size: 1.25rem;
+}
+
+/* Grid de tarjetas */
+.admin-reports-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 16px;
+}
+
+/* Tarjetas individuales */
+.admin-summary-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.admin-summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #3b82f6;
+}
+
+/* Tarjeta Azul (Laboratorios) */
+.admin-summary-blue::before {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.admin-summary-blue {
+  border-left: 4px solid #3b82f6;
+}
+
+.admin-summary-blue .admin-summary-icon {
+  color: #3b82f6;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+}
+
+/* Tarjeta Púrpura (Aulas) */
+.admin-summary-purple::before {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.admin-summary-purple {
+  border-left: 4px solid #8b5cf6;
+}
+
+.admin-summary-purple .admin-summary-icon {
+  color: #8b5cf6;
+  background: linear-gradient(135deg, #f3e8ff, #faf5ff);
+}
+
+/* Tarjeta Verde (Espacio Más Solicitado) */
+.admin-summary-green::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.admin-summary-green {
+  border-left: 4px solid #10b981;
+}
+
+.admin-summary-green .admin-summary-icon {
+  color: #10b981;
+  background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+}
+
+/* Iconos */
+.admin-summary-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.admin-summary-card:hover .admin-summary-icon {
+  transform: scale(1.1);
+}
+
+/* Contenido de texto */
+.admin-summary-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-summary-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.admin-summary-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.admin-summary-description {
+  font-size: 0.875rem;
+  color: #718096;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+/* Efectos hover mejorados */
+.admin-summary-card:hover .admin-summary-title {
+  color: #2d3748;
+}
+
+.admin-summary-card:hover .admin-summary-value {
+  color: #1a202c;
+}
+
+.admin-summary-card:hover .admin-summary-description {
+  color: #4a5568;
+}
+
+/* Badge de destacado */
+.admin-summary-card::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.admin-summary-card:hover::after {
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-reports-summary {
+    padding: 16px;
+    margin-top: 20px;
+  }
+  
+  .admin-reports-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .admin-summary-card {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .admin-summary-icon {
+    align-self: center;
+  }
+  
+  .admin-summary-title {
+    font-size: 1rem;
+  }
+  
+  .admin-summary-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-reports-summary-title {
+    font-size: 1.25rem;
+  }
+  
+  .admin-summary-card {
+    padding: 16px;
+  }
+}
+
+/* Animaciones de entrada */
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-summary-card {
+  animation: cardEntrance 0.6s ease-out;
+}
+
+.admin-summary-card:nth-child(1) { animation-delay: 0.1s; }
+.admin-summary-card:nth-child(2) { animation-delay: 0.2s; }
+.admin-summary-card:nth-child(3) { animation-delay: 0.3s; }

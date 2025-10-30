@@ -1,33 +1,14 @@
 package com.integraupt.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
+/**
+ * DTO para recibir el motivo al rechazar una reserva.
+ */
 public class clsDTOActualizarEstadoReserva {
 
-    @NotNull
-    private Integer reservaId;
-
-    @NotBlank
-    private String estado;
-
+    @NotBlank(message = "El motivo es obligatorio")
     private String motivo;
-
-    public Integer getReservaId() {
-        return reservaId;
-    }
-
-    public void setReservaId(Integer reservaId) {
-        this.reservaId = reservaId;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
 
     public String getMotivo() {
         return motivo;

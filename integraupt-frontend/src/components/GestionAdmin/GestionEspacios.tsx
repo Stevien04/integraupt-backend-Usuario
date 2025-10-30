@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, X, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, Check, Filter } from 'lucide-react';
 
 interface Espacio {
   id: string;
@@ -24,6 +24,12 @@ export const GestionEspacios: React.FC<GestionEspaciosProps> = ({ onAuditLog }) 
   const [showModal, setShowModal] = useState(false);
   const [editingEspacio, setEditingEspacio] = useState<Espacio | null>(null);
   const [saving, setSaving] = useState(false);
+  
+  // Estados para filtros - AGREGAR ESTOS
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterTipo, setFilterTipo] = useState('all');
+  const [filterFacultad, setFilterFacultad] = useState('all');
+  const [filterEstado, setFilterEstado] = useState('all');
   
   const [formData, setFormData] = useState({
     codigo: '',
@@ -72,6 +78,23 @@ export const GestionEspacios: React.FC<GestionEspaciosProps> = ({ onAuditLog }) 
   useEffect(() => {
     loadEspacios();
   }, []);
+
+  // Función para filtrar espacios - AGREGAR ESTA FUNCIÓN
+  const filteredEspacios = espacios.filter(espacio => {
+    const matchSearch = espacio.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                       espacio.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       espacio.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchTipo = filterTipo === 'all' || espacio.tipo.toLowerCase() === filterTipo.toLowerCase();
+    
+    const matchFacultad = filterFacultad === 'all' || espacio.facultad.toLowerCase().includes(filterFacultad.toLowerCase());
+    
+    const matchEstado = filterEstado === 'all' || 
+                       (filterEstado === 'disponible' && espacio.estado === 1) ||
+                       (filterEstado === 'mantenimiento' && espacio.estado === 0);
+    
+    return matchSearch && matchTipo && matchFacultad && matchEstado;
+  });
 
   const mapTipoToBackend = (tipo: string): 'Laboratorio' | 'Salon' => {
     console.log('🔄 Mapeando tipo:', tipo);
@@ -312,15 +335,81 @@ export const GestionEspacios: React.FC<GestionEspaciosProps> = ({ onAuditLog }) 
         </button>
       </div>
 
-      {/* Búsqueda */}
-      <div className="admin-search-container">
-        <div className="admin-search-wrapper">
-          <Search className="admin-search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar espacios..."
-            className="admin-search-input"
-          />
+      {/* Filtros y Búsqueda - NUEVO DISEÑO MEJORADO */}
+      <div className="admin-filters-section">
+        <div className="admin-filters-header">
+          <Filter className="admin-search-icon" />
+          <span className="admin-filters-title">Filtros y Búsqueda</span>
+        </div>
+        
+        <div className="admin-filters-grid">
+          {/* Búsqueda */}
+          <div className="admin-filter-group admin-filter-search">
+            <label className="admin-filter-label">Buscar espacios</label>
+            <div className="admin-search-wrapper admin-search-expanded">
+              <Search className="admin-search-icon" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nombre, código o ubicación..."
+                className="admin-search-input"
+              />
+            </div>
+          </div>
+
+          {/* Filtro por Tipo */}
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Filtrar por tipo</label>
+            <select 
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value)}
+              className="admin-filter-select"
+            >
+              <option value="all">Todos los tipos</option>
+              <option value="laboratorio">Laboratorios</option>
+              <option value="salon">Aulas</option>
+            </select>
+          </div>
+
+          {/* Filtro por Facultad */}
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Filtrar por facultad</label>
+            <select 
+              value={filterFacultad}
+              onChange={(e) => setFilterFacultad(e.target.value)}
+              className="admin-filter-select"
+            >
+              <option value="all">Todas las facultades</option>
+              <option value="FAING">FAING</option>
+              <option value="FADE">FADE</option>
+              <option value="FACEM">FACEM</option>
+              <option value="FAEDCOH">FAEDCOH</option>
+              <option value="FACSA">FACSA</option>
+              <option value="FAU">FAU</option>
+            </select>
+          </div>
+
+          {/* Filtro por Estado */}
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Filtrar por estado</label>
+            <select 
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="admin-filter-select"
+            >
+              <option value="all">Todos los estados</option>
+              <option value="disponible">Disponible</option>
+              <option value="mantenimiento">En Mantenimiento</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Contador de resultados */}
+        <div className="admin-results-count">
+          <span className="admin-results-text">
+            Mostrando {filteredEspacios.length} de {espacios.length} espacios
+          </span>
         </div>
       </div>
 
@@ -347,13 +436,13 @@ export const GestionEspacios: React.FC<GestionEspaciosProps> = ({ onAuditLog }) 
               </tr>
             </thead>
             <tbody className="admin-table-body">
-              {espacios.map((espacio) => (
+              {filteredEspacios.map((espacio) => (
                 <tr key={espacio.id} className="admin-table-row">
                   <td className="admin-table-td">{espacio.codigo || 'N/A'}</td>
                   <td className="admin-table-td">{espacio.nombre}</td>
                   <td className="admin-table-td">
                     <span className={`admin-badge ${espacio.tipo === 'Laboratorio' ? 'admin-badge-blue' : 'admin-badge-purple'}`}>
-                      {espacio.tipo}
+                      {espacio.tipo === 'Salon' ? 'Aula' : espacio.tipo}
                     </span>
                   </td>
                   <td className="admin-table-td">{espacio.facultad}</td>
@@ -387,6 +476,18 @@ export const GestionEspacios: React.FC<GestionEspaciosProps> = ({ onAuditLog }) 
               ))}
             </tbody>
           </table>
+
+          {/* Mensaje cuando no hay resultados */}
+          {filteredEspacios.length === 0 && (
+            <div className="admin-empty-state">
+              <Search className="admin-empty-icon" />
+              <h3 className="admin-empty-title">No se encontraron espacios</h3>
+              <p className="admin-empty-description">
+                No hay espacios que coincidan con los filtros aplicados. 
+                Intenta ajustar los criterios de búsqueda.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -442,7 +543,6 @@ export const GestionEspacios: React.FC<GestionEspaciosProps> = ({ onAuditLog }) 
                     >
                       <option value="Laboratorio">Laboratorio</option>
                       <option value="Salon">Salón</option>
-                      {/* ELIMINA la opción "Aula" */}
                     </select>
                   </div>
 

@@ -286,7 +286,7 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
       {/* Filtros y Búsqueda - DISEÑO MEJORADO */}
       <div className="admin-filters-section">
         <div className="admin-filters-header">
-          <Filter className="admin-filters-icon" />
+          <Filter className="admin-search-icon" />
           <span className="admin-filters-title">Filtros y Búsqueda</span>
         </div>
         

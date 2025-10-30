@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, Server, Clock, Users, FileText, BarChart3, ClipboardList } from 'lucide-react';
 import './../styles/AdminDashboard.css';
-import { GestionEspacios } from './GestionAdmin';
+import { GestionEspacios, GestionHorarios, ReportesEstadisticas } from './GestionAdmin';
 import { GestionUsuarios } from './GestionAdmin';
-import { GestionReservas } from "./GestionAdmin/GestionReservas";
+import { GestionReservas } from './GestionAdmin/GestionReservas';
 
 interface User {
   id: string;
@@ -172,23 +172,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
           )}
 
           {/* Gestión de Horarios - Puedes crear GestionHorarios.tsx después */}
-          {activeModule === 'schedules' && (
-            <div>
-              <div className="admin-content-header">
-                <div>
-                  <h2 className="admin-content-title">Gestión de Horarios</h2>
-                  <p className="admin-content-subtitle">Configura y administra los horarios académicos</p>
-                </div>
-              </div>
-              <p>Componente de horarios - Puedes crear GestionHorarios.tsx</p>
-            </div>
+          {activeModule === 'schedules' && (              
+            <GestionHorarios onAuditLog={addAuditLog} />            
           )}
 
-         {activeModule === 'reservas' && (
-           <div className="admin-content">
+          {/* Gestión de Reservas - Puedes crear GestionReservas.tsx después */}
+          {activeModule === 'reservas' && (
+            <div className="admin-content">
              <GestionReservas onAuditLog={addAuditLog} />
            </div>
-         )}
+          )}
 
           {/* Gestión de Usuarios - Puedes crear GestionUsuarios.tsx después */}
           {activeModule === 'users' && (
@@ -210,15 +203,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
           {/* Reportes y Estadísticas - Puedes crear ReportesEstadisticas.tsx después */}
           {activeModule === 'reports' && (
-            <div>
-              <div className="admin-content-header">
-                <div>
-                  <h2 className="admin-content-title">Reportes y Estadísticas</h2>
-                  <p className="admin-content-subtitle">Análisis y métricas del sistema</p>
-                </div>
-              </div>
-              <p>Componente de reportes - Puedes crear ReportesEstadisticas.tsx</p>
-            </div>
+            <ReportesEstadisticas onAuditLog={addAuditLog} />
           )}
         </div>
       </div>

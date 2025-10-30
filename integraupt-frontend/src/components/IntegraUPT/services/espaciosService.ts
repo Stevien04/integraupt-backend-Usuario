@@ -196,6 +196,18 @@ class EspaciosService {
   getEscuelaNameById(id: number): string {
     return ESCUELAS_MAP[id] || `Escuela ${id}`;
   }
+
+  // Método para mapear estado numérico a texto
+  getEstadoTexto(estado: number | string): string {
+    const estadoNum = typeof estado === 'string' ? parseInt(estado) : estado;
+    return estadoNum === 1 ? 'Disponible' : 'En Mantenimiento';
+  }
+
+  // Método para mapear tipo de base de datos a tipo del frontend
+  getTipoFrontend(tipoBD: string): 'Laboratorio' | 'Aula' {
+    return tipoBD === 'Laboratorio' ? 'Laboratorio' : 'Aula';
+  }
+
 }
 
 export const espaciosService = new EspaciosService();

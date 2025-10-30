@@ -54,7 +54,7 @@ export const GestionReservas: React.FC<GestionReservasProps> = ({ onAuditLog }) 
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
 
-  const urlBase = useMemo(() => 'http://localhost:8082/api/reservas', []);
+  const urlBase = useMemo(() => 'http://localhost:8080/api/reservas', []);
 
   const limpiarMensaje = useCallback(() => {
     setTimeout(() => setMensaje(null), 4000);

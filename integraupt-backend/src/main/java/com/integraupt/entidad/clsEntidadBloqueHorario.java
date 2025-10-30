@@ -6,9 +6,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
 import java.time.LocalTime;
 
+/**
+ * Entidad que representa un bloque horario disponible para reservas.
+ */
 @Entity
 @Table(name = "bloqueshorarios")
 public class clsEntidadBloqueHorario {
@@ -16,26 +18,26 @@ public class clsEntidadBloqueHorario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "IdBloque")
-    private Integer idBloque;
+    private Integer id;
 
     @Column(name = "Orden", nullable = false)
     private Integer orden;
 
-    @Column(name = "Nombre", nullable = false)
+    @Column(name = "Nombre", nullable = false, length = 50)
     private String nombre;
 
     @Column(name = "HoraInicio", nullable = false)
     private LocalTime horaInicio;
 
     @Column(name = "HoraFinal", nullable = false)
-    private LocalTime horaFinal;
+    private LocalTime horaFin;
 
-    public Integer getIdBloque() {
-        return idBloque;
+    public Integer getId() {
+        return id;
     }
 
-    public void setIdBloque(Integer idBloque) {
-        this.idBloque = idBloque;
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public Integer getOrden() {
@@ -62,11 +64,11 @@ public class clsEntidadBloqueHorario {
         this.horaInicio = horaInicio;
     }
 
-    public LocalTime getHoraFinal() {
-        return horaFinal;
+    public LocalTime getHoraFin() {
+        return horaFin;
     }
 
-    public void setHoraFinal(LocalTime horaFinal) {
-        this.horaFinal = horaFinal;
+    public void setHoraFin(LocalTime horaFin) {
+        this.horaFin = horaFin;
     }
 }

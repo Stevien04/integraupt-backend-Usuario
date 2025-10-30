@@ -1,236 +1,163 @@
-import { espaciosService } from './espaciosService';
+import type { Reservacion } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
 
-export interface ReservaUsuario {
-  id: number;
-  usuarioId: number;
-  espacioId: number;
-  espacioNombre: string;
-  espacioCodigo: string;
-  bloqueId?: number | null;
-  bloqueNombre?: string | null;
-  horaInicio?: string | null;
-  horaFin?: string | null;
-  estado: string;
+export interface ReservaFormData {
+  usuario: number;
+  espacio: number;
   fechaReserva: string;
-  fechaSolicitud?: string | null;
-  descripcion?: string | null;
-  motivo?: string | null;
-}
-
-export interface CrearReservaPayload {
-  usuarioId: number;
-  espacioId: number;
-  fechaReserva: string;
-  horaInicio: string;
-  horaFin: string;
+  bloque: number;
   descripcion: string;
   motivo?: string;
 }
 
-export interface ActualizarReservaPayload extends CrearReservaPayload {
-  reservaId: number;
-}
-
-export interface EspacioActivo {
-  id: number;
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  capacidad: number;
-  equipamiento?: string | null;
-  facultadId: number;
-  escuelaId: number;
-  estado: number;
-}
-
-type ReservaUsuarioResponse = {
-  idReserva: number;
-  usuarioId: number;
-  espacioId: number;
-  espacioNombre: string;
-  espacioCodigo: string;
-  bloqueId?: number | null;
-  bloqueNombre?: string | null;
-  horaInicio?: string | null;
-  horaFin?: string | null;
-  estado: string;
-  fechaReserva: string;
-  fechaSolicitud?: string | null;
-  descripcion?: string | null;
-  motivo?: string | null;
-};
-
-type EspacioResponse = {
-  idEspacio: number;
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  capacidad: number;
-  equipamiento?: string | null;
-  facultadId: number;
-  escuelaId: number;
-  estado: number;
-};
-
-const mapTime = (value?: string | null) => {
-  if (!value) return null;
-  return value.length >= 5 ? value.slice(0, 5) : value;
-};
-
-const mapReserva = (reserva: ReservaUsuarioResponse): ReservaUsuario => ({
-  id: reserva.idReserva,
-  usuarioId: reserva.usuarioId,
-  espacioId: reserva.espacioId,
-  espacioNombre: reserva.espacioNombre,
-  espacioCodigo: reserva.espacioCodigo,
-  bloqueId: reserva.bloqueId ?? null,
-  bloqueNombre: reserva.bloqueNombre ?? null,
-  horaInicio: mapTime(reserva.horaInicio),
-  horaFin: mapTime(reserva.horaFin),
-  estado: reserva.estado,
-  fechaReserva: reserva.fechaReserva,
-  fechaSolicitud: reserva.fechaSolicitud ?? null,
-  descripcion: reserva.descripcion ?? null,
-  motivo: reserva.motivo ?? null,
-});
-
-const mapEspacio = (espacio: EspacioResponse): EspacioActivo => ({
-  id: espacio.idEspacio,
-  codigo: espacio.codigo,
-  nombre: espacio.nombre,
-  tipo: espacio.tipo,
-  capacidad: espacio.capacidad,
-  equipamiento: espacio.equipamiento ?? null,
-  facultadId: espacio.facultadId,
-  escuelaId: espacio.escuelaId,
-  estado: espacio.estado,
-});
-
-const buildUrl = (path: string, params?: Record<string, string | number | undefined | null>) => {
-  const url = new URL(path, API_BASE_URL);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        url.searchParams.append(key, String(value));
-      }
-    });
-  }
-  return url.toString();
-};
-
-const handleResponse = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    let message = `Error ${response.status}`;
-    try {
-      const data = await response.json();
-      if (typeof data === 'string') {
-        message = data;
-      } else if (data?.message) {
-        message = data.message;
-      } else if (data?.error) {
-        message = data.error;
-      }
-    } catch (error) {
-      const text = await response.text();
-      if (text) {
-        message = text;
-      }
-    }
-    throw new Error(message);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
-};
-
 class ReservasService {
-  async getReservasPorUsuario(usuarioId: number): Promise<ReservaUsuario[]> {
-    const url = buildUrl('/api/reservas/usuario/' + usuarioId);
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  async getAllReservas(): Promise<any[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reservas`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    const data = await handleResponse<ReservaUsuarioResponse[]>(response);
-    return data.map(mapReserva);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching reservas:', error);
+      throw error;
+    }
   }
 
-  async getEspaciosActivos(): Promise<EspacioActivo[]> {
-    const url = buildUrl('/api/reservas/espacios');
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  async getReservasPorEstado(estado?: string): Promise<any[]> {
+    try {
+      const url = estado 
+        ? `${API_BASE_URL}/api/reservas?estado=${estado}`
+        : `${API_BASE_URL}/api/reservas`;
 
-    const data = await handleResponse<EspacioResponse[]>(response);
-    return data.map(mapEspacio);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching reservas por estado:', error);
+      throw error;
+    }
   }
 
-  async crearReserva(payload: CrearReservaPayload): Promise<ReservaUsuario> {
-    const url = buildUrl('/api/reservas');
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+  async crearReserva(reservaData: ReservaFormData): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reservas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reservaData),
+      });
 
-    const data = await handleResponse<ReservaUsuarioResponse>(response);
-    return mapReserva(data);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating reserva:', error);
+      throw error;
+    }
   }
 
-  async actualizarReserva(reservaId: number, payload: ActualizarReservaPayload): Promise<ReservaUsuario> {
-    const url = buildUrl(`/api/reservas/${reservaId}`);
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+  async aprobarReserva(id: number): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reservas/${id}/aprobar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    const data = await handleResponse<ReservaUsuarioResponse>(response);
-    return mapReserva(data);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error aprobando reserva:', error);
+      throw error;
+    }
   }
 
-  async actualizarEstado(reservaId: number, estado: string, motivo?: string, usuarioId?: number): Promise<ReservaUsuario> {
-    const url = buildUrl(`/api/reservas/${reservaId}/estado`, { usuarioId });
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ estado, motivo }),
-    });
+  async rechazarReserva(id: number, motivo: string): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reservas/${id}/rechazar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ motivo }),
+      });
 
-    const data = await handleResponse<ReservaUsuarioResponse>(response);
-    return mapReserva(data);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error rechazando reserva:', error);
+      throw error;
+    }
   }
 
-  async eliminarReserva(reservaId: number, usuarioId?: number): Promise<void> {
-    const url = buildUrl(`/api/reservas/${reservaId}`, { usuarioId });
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  // Método para mapear reserva de BD a formato del frontend
+  mapearReservaFrontend(reservaBD: any): Reservacion {
+    return {
+      id: reservaBD.id.toString(),
+      type: reservaBD.tipoEspacio === 'Laboratorio' ? 'laboratorio' : 'aula',
+      resource: reservaBD.espacio,
+      resourceId: reservaBD.espacioId?.toString(),
+      date: reservaBD.fechaReserva,
+      startTime: reservaBD.horaInicio,
+      endTime: reservaBD.horaFin,
+      status: this.mapearEstado(reservaBD.estado),
+      motivo: reservaBD.motivo,
+      ciclo: this.extraerCiclo(reservaBD.descripcion),
+      curso: this.extraerCurso(reservaBD.descripcion),
+      solicitante: reservaBD.solicitante,
+      solicitanteEmail: reservaBD.correoSolicitante
+    };
+  }
 
-    await handleResponse<void>(response);
+  private mapearEstado(estadoBD: string): 'active' | 'pending' | 'cancelled' | 'approved' {
+    switch (estadoBD) {
+      case 'Aprobada': return 'approved';
+      case 'Pendiente': return 'pending';
+      case 'Cancelado': return 'cancelled';
+      case 'Rechazada': return 'cancelled';
+      default: return 'pending';
+    }
+  }
+
+  private extraerCiclo(descripcion: string): string {
+    // Implementar lógica para extraer ciclo de la descripción
+    const match = descripcion.match(/Ciclo:\s*([IVX]+)/i);
+    return match ? match[1] : '';
+  }
+
+  private extraerCurso(descripcion: string): string {
+    // Implementar lógica para extraer curso de la descripción
+    const match = descripcion.match(/Curso:\s*([^-]+)/i);
+    return match ? match[1].trim() : descripcion;
   }
 }
 
 export const reservasService = new ReservasService();
-
-export const facultadNombre = (facultadId?: number) => espaciosService.getFacultadNameById(facultadId ?? 0);
-export const escuelaNombre = (escuelaId?: number) => espaciosService.getEscuelaNameById(escuelaId ?? 0);

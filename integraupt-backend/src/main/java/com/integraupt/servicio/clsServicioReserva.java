@@ -1,298 +1,205 @@
 package com.integraupt.servicio;
 
-import com.integraupt.dto.clsDTOBloqueDisponible;
-import com.integraupt.dto.clsDTOReserva;
 import com.integraupt.entidad.clsEntidadBloqueHorario;
-import com.integraupt.entidad.clsEntidadEspacio;
-import com.integraupt.entidad.clsEntidadHorario;
+import com.integraupt.entidad.clsEntidadEspacio_Reserva;
 import com.integraupt.entidad.clsEntidadReserva;
-import com.integraupt.repositorio.clsRepositorioBloqueHorario;
-import com.integraupt.repositorio.clsRepositorioEspacio;
-import com.integraupt.repositorio.clsRepositorioHorario;
+import com.integraupt.entidad.clsEntidadUsuario_Reserva;
+import com.integraupt.entidad.clsEntidadHorario;
+import com.integraupt.dto.clsDTOReserva;
 import com.integraupt.repositorio.clsRepositorioReserva;
-import com.integraupt.repositorio.clsRepositorioUsuario;
+import com.integraupt.repositorio.clsRepositorioHorario;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.integraupt.dto.clsDTOActualizarEstadoReserva;
-import com.integraupt.dto.clsDTOActualizarReserva;
-import com.integraupt.dto.clsDTOReservaUsuario;
-
-import java.time.DayOfWeek;
+import java.text.Normalizer;
+import java.util.regex.Pattern;
+import java.time.format.TextStyle;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Objects;
 
+/**
+ * Servicio de negocio para la administración de reservas.
+ */
 @Service
 public class clsServicioReserva {
 
-    private static final List<String> ESTADOS_OCUPA_BLOQUE = List.of("Pendiente", "Aprobada");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault());
+    private static final Locale LOCALE_ES = new Locale("es", "ES");
+    private static final Pattern DIACRITICS = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
     private final clsRepositorioReserva repositorioReserva;
-    private final clsRepositorioBloqueHorario repositorioBloqueHorario;
     private final clsRepositorioHorario repositorioHorario;
-    private final clsRepositorioEspacio repositorioEspacio;
-    private final clsRepositorioUsuario repositorioUsuario;
 
     public clsServicioReserva(clsRepositorioReserva repositorioReserva,
-                              clsRepositorioBloqueHorario repositorioBloqueHorario,
-                              clsRepositorioHorario repositorioHorario,
-                              clsRepositorioEspacio repositorioEspacio,
-                              clsRepositorioUsuario repositorioUsuario) {
+                              clsRepositorioHorario repositorioHorario) {
         this.repositorioReserva = repositorioReserva;
-        this.repositorioBloqueHorario = repositorioBloqueHorario;
         this.repositorioHorario = repositorioHorario;
-        this.repositorioEspacio = repositorioEspacio;
-        this.repositorioUsuario = repositorioUsuario;
     }
 
-    public List<clsDTOReservaUsuario> listarReservasPorUsuario(Integer usuarioId) {
-        return repositorioReserva.findByUsuarioIdOrderByFechaReservaDesc(usuarioId)
-                .stream()
-                .map(reserva -> mapearReservaParaUsuario(reserva, null, null))
-                .toList();
+    @Transactional(readOnly = true)
+    public List<clsDTOReserva> obtenerReservasPorEstado(String estadoSolicitado) {
+        String estadoNormalizado = normalizarEstado(estadoSolicitado);
+        List<clsEntidadReserva> reservas;
+        
+        if (estadoNormalizado == null || estadoNormalizado.isEmpty()) {
+            reservas = repositorioReserva.findAll();
+        } else {
+            reservas = repositorioReserva.findAllByEstadoIgnoreCaseOrderByFechaSolicitudAsc(estadoNormalizado);
+        }
+        
+        return reservas.stream().map(this::mapearReserva).collect(Collectors.toList());
     }
 
-    public List<clsEntidadEspacio> listarEspaciosActivos() {
-        return repositorioEspacio.findByEstado(1);
+    @Transactional
+    public clsDTOReserva aprobarReserva(Integer id) {
+        clsEntidadReserva reserva = obtenerReserva(id);
+        reserva.setEstado("Aprobada");
+        reserva.setMotivo(null);
+        clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        actualizarOcupacionHorario(actualizada, true);
+        return mapearReserva(actualizada);
     }
 
-    public List<clsDTOBloqueDisponible> buscarBloquesDisponibles(Integer espacioId,
-                                                                 LocalDate fecha,
-                                                                 LocalTime horaInicio,
-                                                                 LocalTime horaFin) {
-        if (horaInicio.isAfter(horaFin) || horaInicio.equals(horaFin)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora de inicio debe ser menor a la hora fin");
+    @Transactional
+    public clsDTOReserva rechazarReserva(Integer id, String motivo) {
+        if (motivo == null || motivo.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El motivo es obligatorio");
+        }
+        clsEntidadReserva reserva = obtenerReserva(id);
+        reserva.setEstado("Rechazada");
+        reserva.setMotivo(motivo.trim());
+        clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        actualizarOcupacionHorario(actualizada, false);
+        return mapearReserva(actualizada);
+    }
+
+    private clsEntidadReserva obtenerReserva(Integer id) {
+        if (id == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El identificador es obligatorio");
+        }
+        Optional<clsEntidadReserva> reserva = repositorioReserva.findById(id);
+        return reserva.orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva solicitada no existe"));
+    }
+
+    private clsDTOReserva mapearReserva(clsEntidadReserva reserva) {
+        clsEntidadUsuario_Reserva usuario = reserva.getUsuario();
+        clsEntidadEspacio_Reserva espacio = reserva.getEspacio();
+        clsEntidadBloqueHorario bloque = reserva.getBloque();
+
+        return new clsDTOReserva(
+                reserva.getIdReserva(),
+                reserva.getEstado(),
+                reserva.getFechaReserva() != null ? DATE_FORMAT.format(reserva.getFechaReserva()) : null,
+                reserva.getFechaSolicitud() != null ? DATE_TIME_FORMAT.format(reserva.getFechaSolicitud()) : null,
+                reserva.getDescripcion(),
+                reserva.getMotivo(),
+                usuario != null ? usuario.getNombreCompleto() : null,
+                usuario != null ? usuario.getCodigo() : null,
+                usuario != null ? usuario.getCorreo() : null,
+                espacio != null ? espacio.getNombre() : null,
+                espacio != null ? espacio.getCodigo() : null,
+                espacio != null ? espacio.getTipo() : null,
+                bloque != null ? bloque.getNombre() : null,
+                bloque != null && bloque.getHoraInicio() != null ? TIME_FORMAT.format(bloque.getHoraInicio()) : null,
+                bloque != null && bloque.getHoraFin() != null ? TIME_FORMAT.format(bloque.getHoraFin()) : null
+        );
+    }
+
+    private String normalizarEstado(String estado) {
+        if (estado == null || estado.trim().isEmpty()) {
+            return null; // Retornar null para obtener todas las reservas
+        }
+        
+        String valor = estado.trim().toLowerCase(Locale.getDefault());
+        switch (valor) {
+            case "pendiente":
+            case "pendientes":
+                return "Pendiente";
+            case "aprobada":
+            case "aprobadas":
+            case "aprobado":
+            case "aprobados":
+                return "Aprobada";
+            case "rechazada":
+            case "rechazadas":
+            case "rechazado":
+            case "rechazados":
+                return "Rechazada";
+            default:
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado no soportado: " + estado);
+        }
+    }
+
+    private void actualizarOcupacionHorario(clsEntidadReserva reserva, boolean ocupado) {
+        if (reserva == null) {
+            return;
         }
 
-        clsEntidadEspacio espacio = repositorioEspacio.findById(espacioId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El espacio seleccionado no existe"));
+        clsEntidadEspacio_Reserva espacio = reserva.getEspacio();
+        clsEntidadBloqueHorario bloque = reserva.getBloque();
 
-        List<clsEntidadBloqueHorario> bloques = new ArrayList<>(
-                repositorioBloqueHorario.findByHoraInicioGreaterThanEqualAndHoraFinalLessThanEqual(horaInicio, horaFin)
+        if (espacio == null || bloque == null || reserva.getFechaReserva() == null) {
+            return;
+        }
+
+        // Convertir a clsEntidadHorario.DiaSemana
+        clsEntidadHorario.DiaSemana diaSemanaEnum = obtenerDiaSemanaEnum(reserva.getFechaReserva());
+        if (diaSemanaEnum == null) {
+            return;
+        }
+
+        // Buscar el horario usando el método del repositorio
+        Optional<clsEntidadHorario> horario = repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
+                espacio.getId().intValue(), // Convertir Long a Integer
+                bloque.getId(),
+                diaSemanaEnum
         );
 
-        if (bloques.isEmpty()) {
-            repositorioBloqueHorario.findByHoraInicioAndHoraFinal(horaInicio, horaFin)
-                    .ifPresent(bloques::add);
-        }
-
-        if (bloques.isEmpty()) {
-            return List.of();
-        }
-
-        String diaSemana = mapearDiaSemana(fecha.getDayOfWeek());
-        List<clsDTOBloqueDisponible> disponibles = new ArrayList<>();
-
-        for (clsEntidadBloqueHorario bloque : bloques) {
-            Optional<clsEntidadHorario> horarioOpt = repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
-                    espacio.getIdEspacio(), bloque.getIdBloque(), diaSemana
-            );
-
-            if (horarioOpt.isEmpty()) {
-                continue;
-            }
-
-            boolean ocupado = horarioOpt.get().isOcupado() ||
-                    repositorioReserva.existsByEspacioIdAndFechaReservaAndBloqueIdAndEstadoIn(
-                            espacio.getIdEspacio(), fecha, bloque.getIdBloque(), ESTADOS_OCUPA_BLOQUE
-                    );
-
-            if (!ocupado) {
-                disponibles.add(new clsDTOBloqueDisponible(
-                        bloque.getIdBloque(),
-                        bloque.getNombre(),
-                        bloque.getHoraInicio(),
-                        bloque.getHoraFinal(),
-                        true
-                ));
-            }
-        }
-
-        return disponibles;
+        horario.ifPresent(h -> {
+            h.setOcupado(ocupado);
+            repositorioHorario.save(h);
+        });
     }
 
-    @Transactional
-    public clsDTOReservaUsuario crearReservaParaUsuario(clsDTOReserva dto) {
-        if (!repositorioUsuario.existsById(dto.getUsuarioId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El usuario indicado no existe");
+    private clsEntidadHorario.DiaSemana obtenerDiaSemanaEnum(LocalDate fecha) {
+        if (fecha == null) {
+            return null;
         }
 
-        clsEntidadEspacio espacio = repositorioEspacio.findById(dto.getEspacioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El espacio indicado no existe"));
-
-        if (dto.getHoraInicio().isAfter(dto.getHoraFin()) || dto.getHoraInicio().equals(dto.getHoraFin())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora de inicio debe ser menor a la hora fin");
+        String nombreDia = fecha.getDayOfWeek().getDisplayName(TextStyle.FULL, LOCALE_ES);
+        if (nombreDia == null || nombreDia.isBlank()) {
+            return null;
         }
 
-        clsEntidadBloqueHorario bloque = repositorioBloqueHorario.findByHoraInicioAndHoraFinal(dto.getHoraInicio(), dto.getHoraFin())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró un bloque para el horario seleccionado"));
+        String capitalizado = nombreDia.substring(0, 1).toUpperCase(LOCALE_ES)
+                + nombreDia.substring(1).toLowerCase(LOCALE_ES);
+        String sinTildes = Normalizer.normalize(capitalizado, Normalizer.Form.NFD);
+        sinTildes = DIACRITICS.matcher(sinTildes).replaceAll("");
 
-        String diaSemana = mapearDiaSemana(dto.getFechaReserva().getDayOfWeek());
-
-        clsEntidadHorario horario = repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
-                        espacio.getIdEspacio(), bloque.getIdBloque(), diaSemana)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El bloque no está asignado al espacio en ese día"));
-
-        boolean bloqueOcupado = horario.isOcupado() ||
-                repositorioReserva.existsByEspacioIdAndFechaReservaAndBloqueIdAndEstadoIn(
-                        espacio.getIdEspacio(), dto.getFechaReserva(), bloque.getIdBloque(), ESTADOS_OCUPA_BLOQUE
-                );
-
-        if (bloqueOcupado) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El bloque seleccionado ya tiene una reserva pendiente o aprobada");
+        // Mapear a clsEntidadHorario.DiaSemana
+        switch (sinTildes) {
+            case "Lunes":
+                return clsEntidadHorario.DiaSemana.Lunes;
+            case "Martes":
+                return clsEntidadHorario.DiaSemana.Martes;
+            case "Miercoles":
+                return clsEntidadHorario.DiaSemana.Miercoles;
+            case "Jueves":
+                return clsEntidadHorario.DiaSemana.Jueves;
+            case "Viernes":
+                return clsEntidadHorario.DiaSemana.Viernes;
+            case "Sabado":
+                return clsEntidadHorario.DiaSemana.Sabado;
+            default:
+                return null;
         }
-
-        clsEntidadReserva reserva = new clsEntidadReserva();
-        reserva.setUsuarioId(dto.getUsuarioId());
-        reserva.setEspacioId(espacio.getIdEspacio());
-        reserva.setBloqueId(bloque.getIdBloque());
-        reserva.setEstado("Pendiente");
-        reserva.setFechaReserva(dto.getFechaReserva());
-        reserva.setDescripcion(dto.getDescripcion());
-        reserva.setMotivo(dto.getMotivo());
-
-        clsEntidadReserva guardada = repositorioReserva.save(reserva);
-        return mapearReservaParaUsuario(guardada, espacio, bloque);
-    }
-
-    @Transactional
-    public clsDTOReservaUsuario actualizarReservaParaUsuario(clsDTOActualizarReserva dto) {
-        if (!repositorioUsuario.existsById(dto.getUsuarioId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "El usuario indicado no existe");
-        }
-
-        clsEntidadReserva reserva = repositorioReserva.findById(dto.getReservaId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva indicada no existe"));
-
-        if (!Objects.equals(reserva.getUsuarioId(), dto.getUsuarioId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene permisos para actualizar esta reserva");
-        }
-
-        clsEntidadEspacio espacio = repositorioEspacio.findById(dto.getEspacioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El espacio indicado no existe"));
-
-        if (dto.getHoraInicio().isAfter(dto.getHoraFin()) || dto.getHoraInicio().equals(dto.getHoraFin())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora de inicio debe ser menor a la hora fin");
-        }
-
-        clsEntidadBloqueHorario bloque = repositorioBloqueHorario.findByHoraInicioAndHoraFinal(dto.getHoraInicio(), dto.getHoraFin())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró un bloque para el horario seleccionado"));
-
-        String diaSemana = mapearDiaSemana(dto.getFechaReserva().getDayOfWeek());
-
-        clsEntidadHorario horario = repositorioHorario.findByEspacioIdAndBloqueIdAndDiaSemana(
-                        espacio.getIdEspacio(), bloque.getIdBloque(), diaSemana)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El bloque no está asignado al espacio en ese día"));
-
-        boolean requiereValidacionBloque = !Objects.equals(reserva.getEspacioId(), espacio.getIdEspacio()) ||
-                !Objects.equals(reserva.getBloqueId(), bloque.getIdBloque()) ||
-                !reserva.getFechaReserva().equals(dto.getFechaReserva());
-
-        if (requiereValidacionBloque) {
-            boolean bloqueOcupado = horario.isOcupado() ||
-                    repositorioReserva.existsByEspacioIdAndFechaReservaAndBloqueIdAndEstadoIn(
-                            espacio.getIdEspacio(), dto.getFechaReserva(), bloque.getIdBloque(), ESTADOS_OCUPA_BLOQUE
-                    );
-
-            if (bloqueOcupado) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "El bloque seleccionado ya tiene una reserva pendiente o aprobada");
-            }
-        }
-
-        reserva.setEspacioId(espacio.getIdEspacio());
-        reserva.setBloqueId(bloque.getIdBloque());
-        reserva.setFechaReserva(dto.getFechaReserva());
-        reserva.setDescripcion(dto.getDescripcion());
-        reserva.setMotivo(dto.getMotivo());
-        reserva.setEstado("Pendiente");
-
-        clsEntidadReserva actualizada = repositorioReserva.save(reserva);
-        return mapearReservaParaUsuario(actualizada, espacio, bloque);
-    }
-
-    @Transactional
-    public clsDTOReservaUsuario actualizarEstadoReserva(clsDTOActualizarEstadoReserva dto, Integer usuarioId) {
-        clsEntidadReserva reserva = repositorioReserva.findById(dto.getReservaId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva indicada no existe"));
-
-        if (usuarioId != null && !Objects.equals(reserva.getUsuarioId(), usuarioId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene permisos para modificar esta reserva");
-        }
-
-        reserva.setEstado(dto.getEstado());
-        if (dto.getMotivo() != null && !dto.getMotivo().isBlank()) {
-            reserva.setMotivo(dto.getMotivo());
-        }
-
-        clsEntidadReserva actualizada = repositorioReserva.save(reserva);
-        return mapearReservaParaUsuario(actualizada, null, null);
-    }
-
-    public void eliminarReserva(Integer reservaId, Integer usuarioId) {
-        clsEntidadReserva reserva = repositorioReserva.findById(reservaId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La reserva indicada no existe"));
-
-        if (usuarioId != null && !Objects.equals(reserva.getUsuarioId(), usuarioId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene permisos para eliminar esta reserva");
-        }
-
-        repositorioReserva.delete(reserva);
-    }
-
-    private clsDTOReservaUsuario mapearReservaParaUsuario(clsEntidadReserva reserva,
-                                                          clsEntidadEspacio espacio,
-                                                          clsEntidadBloqueHorario bloque) {
-        clsDTOReservaUsuario dto = new clsDTOReservaUsuario();
-        dto.setIdReserva(reserva.getIdReserva());
-        dto.setUsuarioId(reserva.getUsuarioId());
-        dto.setEstado(reserva.getEstado());
-        dto.setFechaReserva(reserva.getFechaReserva());
-        dto.setFechaSolicitud(reserva.getFechaSolicitud());
-        dto.setDescripcion(reserva.getDescripcion());
-        dto.setMotivo(reserva.getMotivo());
-
-        if (espacio == null) {
-            espacio = repositorioEspacio.findById(reserva.getEspacioId()).orElse(null);
-        }
-
-        if (espacio != null) {
-            dto.setEspacioId(espacio.getIdEspacio());
-            dto.setEspacioNombre(espacio.getNombre());
-            dto.setEspacioCodigo(espacio.getCodigo());
-        } else {
-            dto.setEspacioId(reserva.getEspacioId());
-        }
-
-        if (bloque == null) {
-            bloque = repositorioBloqueHorario.findById(reserva.getBloqueId()).orElse(null);
-        }
-
-        if (bloque != null) {
-            dto.setBloqueId(bloque.getIdBloque());
-            dto.setBloqueNombre(bloque.getNombre());
-            dto.setHoraInicio(bloque.getHoraInicio());
-            dto.setHoraFin(bloque.getHoraFinal());
-        } else {
-            dto.setBloqueId(reserva.getBloqueId());
-        }
-
-        return dto;
-    }
-
-    private String mapearDiaSemana(DayOfWeek dia) {
-        return switch (dia) {
-            case MONDAY -> "Lunes";
-            case TUESDAY -> "Martes";
-            case WEDNESDAY -> "Miercoles";
-            case THURSDAY -> "Jueves";
-            case FRIDAY -> "Viernes";
-            case SATURDAY -> "Sabado";
-            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las reservas solo están disponibles de lunes a sábado");
-        };
     }
 }

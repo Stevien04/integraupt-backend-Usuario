@@ -1,26 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Navigation } from './Navigation';
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  X,
-  Check,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react';
+import { Calendar, Clock, MapPin, Search, Plus, Edit, Trash2, Eye, X, Check } from 'lucide-react';
 import './../../styles/ReservasScreen.css';
-import {
-  reservasService,
-  type ReservaUsuario,
-  type EspacioActivo,
-} from './services/reservasService';
-import { facultadNombre, escuelaNombre } from './services/reservasService';
+
+interface Reservation {
+  id: string;
+  location: string;
+  resource: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: 'active' | 'pending' | 'cancelled';
+}
 
 interface ReservasScreenProps {
   user: {
@@ -32,7 +23,6 @@ interface ReservasScreenProps {
       role?: string;
       login_type?: string;
       codigo?: string;
-      [key: string]: unknown;
     };
   };
   currentSection?: 'home' | 'reservas' | 'eventos' | 'perfil';
@@ -40,526 +30,172 @@ interface ReservasScreenProps {
   onBackToDashboard?: () => void;
 }
 
-type ViewMode = 'list' | 'new' | 'edit' | 'availability';
+export const ReservasScreen: React.FC<ReservasScreenProps> = ({ 
+  user, 
+  currentSection = 'reservas', 
+  onSectionChange,
+  onBackToDashboard 
+}) => {
+  const [view, setView] = useState<'list' | 'new' | 'edit' | 'availability'>('list');
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-interface ReservationFormState {
-  locationId: string;
-  espacioId: string;
-  fechaReserva: string;
-  horaInicio: string;
-  horaFin: string;
-  descripcion: string;
-  motivo: string;
-}
-
-interface AvailabilityResource {
-  id: number;
-  name: string;
-  available: boolean;
-  details: string;
-  facultadId: number;
-  escuelaId: number;
-  tipo: string;
-  capacidad: number;
-  equipamiento?: string | null;
-}
-
-interface AvailabilityLocation {
-  locationId: string;
-  locationName: string;
-  resources: AvailabilityResource[];
-}
-
-const BASE_FORM_STATE: ReservationFormState = {
-  locationId: '',
-  espacioId: '',
-  fechaReserva: '',
-  horaInicio: '',
-  horaFin: '',
-  descripcion: '',
-  motivo: '',
-};
-
-const createFormState = (overrides?: Partial<ReservationFormState>): ReservationFormState => ({
-  ...BASE_FORM_STATE,
-  ...overrides,
-});
-
-const normalizeStatus = (status: string | null | undefined) =>
-  (status ?? '').toLowerCase();
-
-const statusToCardClass = (status: string) => {
-  const normalized = normalizeStatus(status);
-  if (normalized === 'aprobada' || normalized === 'activa') {
-    return 'reservas-card reservas-card-active';
-  }
-  if (normalized === 'pendiente') {
-    return 'reservas-card reservas-card-pending';
-  }
-  if (normalized === 'cancelada' || normalized === 'rechazada') {
-    return 'reservas-card reservas-card-cancelled';
-  }
-  return 'reservas-card';
-};
-
-const statusToBadgeClass = (status: string) => {
-  const normalized = normalizeStatus(status);
-  if (normalized === 'aprobada' || normalized === 'activa') {
-    return 'reservas-status reservas-status-active';
-  }
-  if (normalized === 'pendiente') {
-    return 'reservas-status reservas-status-pending';
-  }
-  if (normalized === 'cancelada' || normalized === 'rechazada') {
-    return 'reservas-status reservas-status-cancelled';
-  }
-  return 'reservas-status reservas-status-default';
-};
-
-const statusToLabel = (status: string) => {
-  const normalized = normalizeStatus(status);
-  switch (normalized) {
-    case 'aprobada':
-      return 'Aprobada';
-    case 'cancelada':
-      return 'Cancelada';
-    case 'rechazada':
-      return 'Rechazada';
-    case 'pendiente':
-      return 'Pendiente';
-    case 'activa':
-      return 'Activa';
-    default:
-      return status;
-  }
-};
-
-const canEditReservation = (status: string) => normalizeStatus(status) === 'pendiente';
-const canCancelReservation = (status: string) => {
-  const normalized = normalizeStatus(status);
-  return normalized === 'pendiente' || normalized === 'aprobada';
-};
-const canDeleteReservation = (status: string) => {
-  const normalized = normalizeStatus(status);
-  return normalized === 'cancelada' || normalized === 'rechazada';
-};
-
-const formatDate = (dateIso: string) => {
-  if (!dateIso) return '';
-  const date = new Date(`${dateIso}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return dateIso;
-  }
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  // Estado para nueva reserva/edición
+  const [formData, setFormData] = useState({
+    location: '',
+    resource: '',
+    date: '',
+    startTime: '',
+    endTime: ''
   });
-};
 
-const formatTime = (value?: string | null) => {
-  if (!value) return '';
-  return value.length >= 5 ? value.slice(0, 5) : value;
-};
+  // Reservas de ejemplo
+  const [reservations, setReservations] = useState<Reservation[]>([
+    {
+      id: '1',
+      location: 'Biblioteca Central',
+      resource: 'Mesa #12',
+      date: '2025-10-09',
+      startTime: '14:00',
+      endTime: '16:00',
+      status: 'active'
+    },
+    {
+      id: '2',
+      location: 'Laboratorio de Computación',
+      resource: 'PC #08',
+      date: '2025-10-10',
+      startTime: '10:00',
+      endTime: '12:00',
+      status: 'active'
+    },
+    {
+      id: '3',
+      location: 'Sala de Reuniones',
+      resource: 'Sala A',
+      date: '2025-10-12',
+      startTime: '15:00',
+      endTime: '17:00',
+      status: 'pending'
+    }
+  ]);
 
-const resolveUsuarioId = (user: ReservasScreenProps['user']): number | null => {
-  const metadata = user?.user_metadata ?? {};
-  const possibleKeys = [
-    'usuarioId',
-    'usuario_id',
-    'idUsuario',
-    'id_usuario',
-    'codigoUsuario',
-    'codigo_usuario',
-    'codigo',
+  // Disponibilidad de recursos
+  const availabilityData = [
+    {
+      location: 'Biblioteca Central',
+      resources: [
+        { name: 'Mesa #1', available: true, nextAvailable: '10:00' },
+        { name: 'Mesa #2', available: false, nextAvailable: '14:00' },
+        { name: 'Mesa #3', available: true, nextAvailable: 'Ahora' },
+        { name: 'Mesa #4', available: true, nextAvailable: 'Ahora' },
+      ]
+    },
+    {
+      location: 'Laboratorio de Computación',
+      resources: [
+        { name: 'PC #01', available: true, nextAvailable: 'Ahora' },
+        { name: 'PC #02', available: false, nextAvailable: '16:00' },
+        { name: 'PC #03', available: true, nextAvailable: 'Ahora' },
+      ]
+    },
+    {
+      location: 'Sala de Reuniones',
+      resources: [
+        { name: 'Sala A', available: false, nextAvailable: '18:00' },
+        { name: 'Sala B', available: true, nextAvailable: 'Ahora' },
+      ]
+    }
   ];
 
-  for (const key of possibleKeys) {
-    const value = metadata[key];
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === 'string') {
-      const parsed = Number(value);
-      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-  }
-
-  const parsedId = Number(user?.id ?? '');
-  if (!Number.isNaN(parsedId) && Number.isFinite(parsedId)) {
-    return parsedId;
-  }
-
-  return null;
-};
-
-export const ReservasScreen: React.FC<ReservasScreenProps> = ({
-  user,
-  currentSection = 'reservas',
-  onSectionChange,
-  onBackToDashboard,
-}) => {
-  const [view, setView] = useState<ViewMode>('list');
-  const [reservations, setReservations] = useState<ReservaUsuario[]>([]);
-  const [reservationsLoading, setReservationsLoading] = useState<boolean>(false);
-  const [reservationsError, setReservationsError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [espacios, setEspacios] = useState<EspacioActivo[]>([]);
-  const [espaciosLoading, setEspaciosLoading] = useState<boolean>(false);
-  const [espaciosError, setEspaciosError] = useState<string | null>(null);
-  const [selectedReservation, setSelectedReservation] = useState<ReservaUsuario | null>(null);
-  const [formData, setFormData] = useState<ReservationFormState>(createFormState());
-  const [formError, setFormError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [actioning, setActioning] = useState<{ id: number; type: 'cancel' | 'delete' } | null>(null);
-
-  const usuarioId = useMemo(() => resolveUsuarioId(user), [user]);
-  const navigationSection = useMemo(
-    () => (currentSection === 'reservas' ? 'servicios' : currentSection) as
-      | 'home'
-      | 'servicios'
-      | 'eventos'
-      | 'perfil',
-    [currentSection],
-  );
-
-  const handleNavigationChange = useCallback(
-    (section: 'home' | 'servicios' | 'eventos' | 'perfil') => {
-      if (section === 'servicios') {
-        onSectionChange?.('reservas');
-      } else {
-        onSectionChange?.(section);
-      }
-    },
-    [onSectionChange],
-  );
-
-  const loadReservations = useCallback(async () => {
-    if (!usuarioId) {
-      setReservations([]);
-      setReservationsError('No se pudo determinar el identificador del usuario.');
-      return;
-    }
-
-    setReservationsLoading(true);
-    setReservationsError(null);
-    try {
-      const data = await reservasService.getReservasPorUsuario(usuarioId);
-      setReservations(data);
-    } catch (error) {
-      setReservationsError(
-        error instanceof Error
-          ? error.message
-          : 'No se pudieron cargar las reservas. Inténtalo nuevamente.',
-      );
-    } finally {
-      setReservationsLoading(false);
-    }
-  }, [usuarioId]);
-
-  const loadEspacios = useCallback(async () => {
-    setEspaciosLoading(true);
-    setEspaciosError(null);
-    try {
-      const data = await reservasService.getEspaciosActivos();
-      setEspacios(data);
-    } catch (error) {
-      setEspaciosError(
-        error instanceof Error
-          ? error.message
-          : 'No se pudieron cargar los espacios disponibles.',
-      );
-    } finally {
-      setEspaciosLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadReservations();
-  }, [loadReservations]);
-
-  useEffect(() => {
-    loadEspacios();
-  }, [loadEspacios]);
-
-  useEffect(() => {
-    if (selectedReservation && !formData.locationId && espacios.length > 0) {
-      const espacio = espacios.find((item) => item.id === selectedReservation.espacioId);
-      if (espacio) {
-        setFormData((prev) => ({
-          ...prev,
-          locationId: String(espacio.facultadId),
-        }));
-      }
-    }
-  }, [espacios, selectedReservation, formData.locationId]);
-
-  const sortedReservations = useMemo(() => {
-    const reservationsClone = [...reservations];
-    reservationsClone.sort((a, b) => {
-      const dateA = new Date(`${a.fechaReserva}T${formatTime(a.horaInicio) || '00:00'}:00`);
-      const dateB = new Date(`${b.fechaReserva}T${formatTime(b.horaInicio) || '00:00'}:00`);
-      return dateB.getTime() - dateA.getTime();
-    });
-    return reservationsClone;
-  }, [reservations]);
-
-  const filteredReservations = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) {
-      return sortedReservations;
-    }
-
-    return sortedReservations.filter((reservation) => {
-      const values = [
-        reservation.espacioNombre,
-        reservation.espacioCodigo,
-        reservation.descripcion ?? '',
-        reservation.motivo ?? '',
-        reservation.bloqueNombre ?? '',
-        statusToLabel(reservation.estado),
-        formatDate(reservation.fechaReserva),
-      ];
-      return values.some((value) => value.toLowerCase().includes(term));
-    });
-  }, [sortedReservations, searchTerm]);
-
-  const availabilityData = useMemo<AvailabilityLocation[]>(() => {
-    if (espacios.length === 0) {
-      return [];
-    }
-
-    const grouped = new Map<string, AvailabilityLocation>();
-    espacios.forEach((espacio) => {
-      const locationId = String(espacio.facultadId);
-      if (!grouped.has(locationId)) {
-        grouped.set(locationId, {
-          locationId,
-          locationName: facultadNombre(espacio.facultadId),
-          resources: [],
-        });
-      }
-
-      grouped.get(locationId)!.resources.push({
-        id: espacio.id,
-        name: `${espacio.nombre} (${espacio.codigo})`,
-        available: espacio.estado === 1,
-        details: `${espacio.tipo} • Capacidad: ${espacio.capacidad}`,
-        facultadId: espacio.facultadId,
-        escuelaId: espacio.escuelaId,
-        tipo: espacio.tipo,
-        capacidad: espacio.capacidad,
-        equipamiento: espacio.equipamiento,
-      });
-    });
-
-    return Array.from(grouped.values())
-      .map((group) => ({
-        ...group,
-        resources: group.resources.sort((a, b) => a.name.localeCompare(b.name, 'es')),
-      }))
-      .sort((a, b) => a.locationName.localeCompare(b.locationName, 'es'));
-  }, [espacios]);
-
-  const locationOptions = useMemo(() => {
-    const uniqueLocations = new Map<string, string>();
-    espacios.forEach((espacio) => {
-      uniqueLocations.set(String(espacio.facultadId), facultadNombre(espacio.facultadId));
-    });
-    return Array.from(uniqueLocations.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [espacios]);
-
-  const resourceOptions = useMemo(() => {
-    return espacios
-      .filter((espacio) => !formData.locationId || String(espacio.facultadId) === formData.locationId)
-      .map((espacio) => ({
-        id: String(espacio.id),
-        label: `${espacio.nombre} (${espacio.codigo})`,
-        subtitle: `${espacio.tipo} • ${escuelaNombre(espacio.escuelaId)} • Capacidad: ${espacio.capacidad}`,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'es'));
-  }, [espacios, formData.locationId]);
-
-  const handleShowNewForm = (overrides?: Partial<ReservationFormState>) => {
-    setSelectedReservation(null);
-    setFormError(null);
-    setActionError(null);
-    setFormData(createFormState(overrides));
-    setView('new');
-  };
-
-  const handleBackToList = () => {
+  const handleCreateReservation = () => {
+    const newReservation: Reservation = {
+      id: Date.now().toString(),
+      location: formData.location,
+      resource: formData.resource,
+      date: formData.date,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      status: 'pending'
+    };
+    setReservations([...reservations, newReservation]);
+    setFormData({ location: '', resource: '', date: '', startTime: '', endTime: '' });
     setView('list');
-    setSelectedReservation(null);
-    setFormError(null);
-    setActionError(null);
   };
 
-  const handleEditReservation = (reservation: ReservaUsuario) => {
-    const espacio = espacios.find((item) => item.id === reservation.espacioId);
+  const handleUpdateReservation = () => {
+    if (!selectedReservation) return;
+    
+    setReservations(reservations.map(r => 
+      r.id === selectedReservation.id 
+        ? { ...r, ...formData }
+        : r
+    ));
+    setSelectedReservation(null);
+    setFormData({ location: '', resource: '', date: '', startTime: '', endTime: '' });
+    setView('list');
+  };
+
+  const handleCancelReservation = (id: string) => {
+    if (window.confirm('¿Estás seguro de cancelar esta reserva?')) {
+      setReservations(reservations.map(r => 
+        r.id === id ? { ...r, status: 'cancelled' as const } : r
+      ));
+    }
+  };
+
+  const handleDeleteReservation = (id: string) => {
+    if (window.confirm('¿Estás seguro de eliminar esta reserva?')) {
+      setReservations(reservations.filter(r => r.id !== id));
+    }
+  };
+
+  const handleEditReservation = (reservation: Reservation) => {
     setSelectedReservation(reservation);
-    setFormError(null);
-    setActionError(null);
-    setFormData(
-      createFormState({
-        locationId: espacio ? String(espacio.facultadId) : '',
-        espacioId: String(reservation.espacioId),
-        fechaReserva: reservation.fechaReserva,
-        horaInicio: formatTime(reservation.horaInicio),
-        horaFin: formatTime(reservation.horaFin),
-        descripcion: reservation.descripcion ?? `Reserva de ${reservation.espacioNombre}`,
-        motivo: reservation.motivo ?? '',
-      }),
-    );
+    setFormData({
+      location: reservation.location,
+      resource: reservation.resource,
+      date: reservation.date,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime
+    });
     setView('edit');
   };
 
-  const validateForm = () => {
-    if (!formData.locationId) {
-      setFormError('Selecciona una ubicación.');
-      return false;
-    }
-    if (!formData.espacioId) {
-      setFormError('Selecciona un recurso para la reserva.');
-      return false;
-    }
-    if (!formData.fechaReserva) {
-      setFormError('Selecciona la fecha de la reserva.');
-      return false;
-    }
-    if (!formData.horaInicio || !formData.horaFin) {
-      setFormError('Ingresa la hora de inicio y fin.');
-      return false;
-    }
-    return true;
-  };
+  const filteredReservations = reservations.filter(r => 
+    r.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.resource.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleSubmitReservation = async () => {
-    if (!usuarioId) {
-      setFormError('No se pudo identificar al usuario.');
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setSubmitting(true);
-    setFormError(null);
-
-    const espacio = espacios.find((item) => String(item.id) === formData.espacioId);
-    const descripcion = formData.descripcion.trim() || `Reserva de ${espacio?.nombre ?? 'espacio'}`;
-    const motivo = formData.motivo.trim();
-
-    try {
-      if (view === 'edit' && selectedReservation) {
-        const updated = await reservasService.actualizarReserva(selectedReservation.id, {
-          reservaId: selectedReservation.id,
-          usuarioId,
-          espacioId: Number(formData.espacioId),
-          fechaReserva: formData.fechaReserva,
-          horaInicio: formData.horaInicio,
-          horaFin: formData.horaFin,
-          descripcion,
-          motivo: motivo || undefined,
-        });
-
-        setReservations((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      } else {
-        const created = await reservasService.crearReserva({
-          usuarioId,
-          espacioId: Number(formData.espacioId),
-          fechaReserva: formData.fechaReserva,
-          horaInicio: formData.horaInicio,
-          horaFin: formData.horaFin,
-          descripcion,
-          motivo: motivo || undefined,
-        });
-
-        setReservations((prev) => [...prev, created]);
-      }
-
-      setFormData(createFormState());
-      setSelectedReservation(null);
-      setView('list');
-    } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : 'No se pudo guardar la reserva. Inténtalo nuevamente.',
-      );
-    } finally {
-      setSubmitting(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'reservas-status-active';
+      case 'pending': return 'reservas-status-pending';
+      case 'cancelled': return 'reservas-status-cancelled';
+      default: return 'reservas-status-default';
     }
   };
 
-  const handleCancelReservation = async (reservation: ReservaUsuario) => {
-    if (!usuarioId) {
-      setActionError('No se pudo identificar al usuario.');
-      return;
-    }
-
-    const confirmCancel = window.confirm('¿Estás seguro de cancelar esta reserva?');
-    if (!confirmCancel) {
-      return;
-    }
-
-    setActioning({ id: reservation.id, type: 'cancel' });
-    setActionError(null);
-
-    try {
-      const updated = await reservasService.actualizarEstado(reservation.id, 'Cancelada', undefined, usuarioId);
-      setReservations((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : 'No se pudo cancelar la reserva. Inténtalo nuevamente.',
-      );
-    } finally {
-      setActioning(null);
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Activa';
+      case 'pending': return 'Pendiente';
+      case 'cancelled': return 'Cancelada';
+      default: return status;
     }
   };
-
-  const handleDeleteReservation = async (reservation: ReservaUsuario) => {
-    if (!usuarioId) {
-      setActionError('No se pudo identificar al usuario.');
-      return;
-    }
-
-    const confirmDelete = window.confirm('¿Estás seguro de eliminar esta reserva? Esta acción es irreversible.');
-    if (!confirmDelete) {
-      return;
-    }
-
-    setActioning({ id: reservation.id, type: 'delete' });
-    setActionError(null);
-
-    try {
-      await reservasService.eliminarReserva(reservation.id, usuarioId);
-      setReservations((prev) => prev.filter((item) => item.id !== reservation.id));
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : 'No se pudo eliminar la reserva. Inténtalo nuevamente.',
-      );
-    } finally {
-      setActioning(null);
-    }
-  };
-
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   return (
     <div className="reservas-container">
       <Navigation
-        user={user}
-        currentSection={navigationSection}
-        onSectionChange={handleNavigationChange}
+        user={user} 
+        currentSection={currentSection} 
+        onSectionChange={onSectionChange}
         onBackToDashboard={onBackToDashboard}
       />
-
+      
       <main className="reservas-main">
+        {/* Header */}
         <div className="reservas-header">
           <h1 className="reservas-title">Gestión de Reservas</h1>
           <p className="reservas-subtitle">
@@ -567,83 +203,60 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
           </p>
         </div>
 
+        {/* Botones de acción */}
         <div className="reservas-actions">
           <button
-            onClick={handleBackToList}
-            className={`reservas-action-btn ${
-              view === 'list' ? 'reservas-action-active' : 'reservas-action-inactive'
-            }`}
+            onClick={() => setView('list')}
+            className={`reservas-action-btn ${view === 'list' ? 'reservas-action-active' : 'reservas-action-inactive'}`}
           >
             Mis Reservas
           </button>
           <button
-            onClick={() => handleShowNewForm()}
-            className={`reservas-action-btn reservas-action-new ${
-              view === 'new' ? 'reservas-action-active' : 'reservas-action-inactive'
-            }`}
+            onClick={() => {
+              setFormData({ location: '', resource: '', date: '', startTime: '', endTime: '' });
+              setView('new');
+            }}
+            className={`reservas-action-btn reservas-action-new ${view === 'new' ? 'reservas-action-active' : 'reservas-action-inactive'}`}
           >
             <Plus className="reservas-action-icon" />
             Nueva Reserva
           </button>
           <button
-            onClick={() => {
-              setView('availability');
-              setFormError(null);
-              setActionError(null);
-            }}
-            className={`reservas-action-btn reservas-action-availability ${
-              view === 'availability' ? 'reservas-action-active' : 'reservas-action-inactive'
-            }`}
+            onClick={() => setView('availability')}
+            className={`reservas-action-btn reservas-action-availability ${view === 'availability' ? 'reservas-action-active' : 'reservas-action-inactive'}`}
           >
             <Eye className="reservas-action-icon" />
             Ver Disponibilidad
           </button>
         </div>
 
+        {/* Vista de Lista de Reservas */}
         {view === 'list' && (
           <div className="reservas-list-container">
+            {/* Barra de búsqueda */}
             <div className="reservas-search-container">
               <div className="reservas-search-wrapper">
                 <Search className="reservas-search-icon" />
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Buscar por ubicación, recurso o estado..."
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por ubicación o recurso..."
                   className="reservas-search-input"
                 />
               </div>
             </div>
 
-            {actionError && (
-              <div className="reservas-form-error">{actionError}</div>
-            )}
-
-            {reservationsLoading ? (
-              <div className="reservas-loading">
-                <Loader2 className="reservas-loading-icon" />
-                Cargando tus reservas...
-              </div>
-            ) : reservationsError ? (
-              <div className="reservas-empty">
-                <AlertCircle className="reservas-empty-icon" />
-                <h3 className="reservas-empty-title">No pudimos cargar tus reservas</h3>
-                <p className="reservas-empty-description">{reservationsError}</p>
-                <button onClick={loadReservations} className="reservas-empty-btn">
-                  Reintentar
-                </button>
-              </div>
-            ) : filteredReservations.length === 0 ? (
+            {/* Lista de reservas */}
+            {filteredReservations.length === 0 ? (
               <div className="reservas-empty">
                 <Calendar className="reservas-empty-icon" />
                 <h3 className="reservas-empty-title">No hay reservas</h3>
                 <p className="reservas-empty-description">
-                  {searchTerm
-                    ? 'No se encontraron reservas con ese criterio.'
-                    : 'Comienza creando tu primera reserva.'}
+                  {searchTerm ? 'No se encontraron reservas con ese criterio' : 'Comienza creando tu primera reserva'}
                 </p>
                 <button
-                  onClick={() => handleShowNewForm()}
+                  onClick={() => setView('new')}
                   className="reservas-empty-btn"
                 >
                   Crear Reserva
@@ -652,46 +265,37 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
             ) : (
               <div className="reservas-grid">
                 {filteredReservations.map((reservation) => (
-                  <div key={reservation.id} className={statusToCardClass(reservation.estado)}>
+                  <div
+                    key={reservation.id}
+                    className={`reservas-card ${
+                      reservation.status === 'active' ? 'reservas-card-active' :
+                      reservation.status === 'pending' ? 'reservas-card-pending' : 'reservas-card-cancelled'
+                    }`}
+                  >
                     <div className="reservas-card-header">
-                      <div>
-                        <h3 className="reservas-card-title">{reservation.espacioNombre}</h3>
-                        {reservation.bloqueNombre && (
-                          <p className="reservas-card-subtitle">{reservation.bloqueNombre}</p>
-                        )}
-                      </div>
-                      <span className={statusToBadgeClass(reservation.estado)}>
-                        {statusToLabel(reservation.estado)}
+                      <h3 className="reservas-card-title">{reservation.location}</h3>
+                      <span className={`reservas-status ${getStatusColor(reservation.status)}`}>
+                        {getStatusLabel(reservation.status)}
                       </span>
                     </div>
-
+                    
                     <div className="reservas-card-details">
                       <div className="reservas-detail">
                         <MapPin className="reservas-detail-icon" />
-                        {reservation.espacioCodigo}
+                        {reservation.resource}
                       </div>
                       <div className="reservas-detail">
                         <Calendar className="reservas-detail-icon" />
-                        {formatDate(reservation.fechaReserva)}
+                        {new Date(reservation.date).toLocaleDateString('es-ES')}
                       </div>
                       <div className="reservas-detail">
                         <Clock className="reservas-detail-icon" />
-                        {`${formatTime(reservation.horaInicio)} - ${formatTime(reservation.horaFin)}`}
+                        {reservation.startTime} - {reservation.endTime}
                       </div>
-                      {reservation.descripcion && (
-                        <div className="reservas-detail reservas-detail-description">
-                          {reservation.descripcion}
-                        </div>
-                      )}
-                      {reservation.motivo && (
-                        <div className="reservas-detail reservas-detail-motivo">
-                          Motivo: {reservation.motivo}
-                        </div>
-                      )}
                     </div>
 
-                    <div className="reservas-card-actions">
-                      {canEditReservation(reservation.estado) && (
+                    {reservation.status !== 'cancelled' && (
+                      <div className="reservas-card-actions">
                         <button
                           onClick={() => handleEditReservation(reservation)}
                           className="reservas-btn reservas-btn-edit"
@@ -699,31 +303,23 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
                           <Edit className="reservas-btn-icon" />
                           Editar
                         </button>
-                      )}
-                      {canCancelReservation(reservation.estado) && (
                         <button
-                          onClick={() => handleCancelReservation(reservation)}
+                          onClick={() => handleCancelReservation(reservation.id)}
                           className="reservas-btn reservas-btn-cancel"
-                          disabled={actioning?.id === reservation.id && actioning.type === 'cancel'}
                         >
                           <Trash2 className="reservas-btn-icon" />
-                          {actioning?.id === reservation.id && actioning.type === 'cancel'
-                            ? 'Cancelando...'
-                            : 'Cancelar'}
+                          Cancelar
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    {canDeleteReservation(reservation.estado) && (
+                    {reservation.status === 'cancelled' && (
                       <button
-                        onClick={() => handleDeleteReservation(reservation)}
+                        onClick={() => handleDeleteReservation(reservation.id)}
                         className="reservas-btn reservas-btn-delete"
-                        disabled={actioning?.id === reservation.id && actioning.type === 'delete'}
                       >
                         <Trash2 className="reservas-btn-icon" />
-                        {actioning?.id === reservation.id && actioning.type === 'delete'
-                          ? 'Eliminando...'
-                          : 'Eliminar'}
+                        Eliminar
                       </button>
                     )}
                   </div>
@@ -733,92 +329,55 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
           </div>
         )}
 
-        {(view === 'new' || view === 'edit') && (
+        {/* Formulario Nueva Reserva */}
+        {view === 'new' && (
           <div className="reservas-form-container">
             <div className="reservas-form-header">
-              <h2 className="reservas-form-title">
-                {view === 'edit' ? 'Editar Reserva' : 'Nueva Reserva'}
-              </h2>
-              <button onClick={handleBackToList} className="reservas-form-close">
+              <h2 className="reservas-form-title">Nueva Reserva</h2>
+              <button
+                onClick={() => setView('list')}
+                className="reservas-form-close"
+              >
                 <X className="reservas-form-close-icon" />
               </button>
             </div>
 
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                handleSubmitReservation();
-              }}
-              className="reservas-form"
-            >
-              {formError && <div className="reservas-form-error">{formError}</div>}
-
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateReservation(); }} className="reservas-form">
               <div className="reservas-form-group">
                 <label className="reservas-form-label">Ubicación</label>
                 <select
-                  value={formData.locationId}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      locationId: event.target.value,
-                      espacioId: '',
-                    }))
-                  }
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value, resource: '' })}
                   className="reservas-form-select"
                   required
                 >
                   <option value="">Selecciona una ubicación</option>
-                  {locationOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
+                  <option value="Biblioteca Central">Biblioteca Central</option>
+                  <option value="Laboratorio de Computación">Laboratorio de Computación</option>
+                  <option value="Sala de Reuniones">Sala de Reuniones</option>
+                  <option value="Auditorio">Auditorio</option>
                 </select>
               </div>
 
               <div className="reservas-form-group">
                 <label className="reservas-form-label">Recurso</label>
-                <select
-                  value={formData.espacioId}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    const espacio = espacios.find((item) => String(item.id) === value);
-                    setFormData((prev) => ({
-                      ...prev,
-                      espacioId: value,
-                      descripcion: prev.descripcion || (espacio ? `Reserva de ${espacio.nombre}` : prev.descripcion),
-                    }));
-                  }}
-                  className="reservas-form-select"
+                <input
+                  type="text"
+                  value={formData.resource}
+                  onChange={(e) => setFormData({ ...formData, resource: e.target.value })}
+                  placeholder="Ej: Mesa #12, PC #08, Sala A"
+                  className="reservas-form-input"
                   required
-                  disabled={resourceOptions.length === 0}
-                >
-                  <option value="">Selecciona un recurso</option>
-                  {resourceOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {formData.espacioId && (
-                  <p className="reservas-form-helper">
-                    {resourceOptions.find((item) => item.id === formData.espacioId)?.subtitle}
-                  </p>
-                )}
+                />
               </div>
 
               <div className="reservas-form-group">
                 <label className="reservas-form-label">Fecha</label>
                 <input
                   type="date"
-                  value={formData.fechaReserva}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      fechaReserva: event.target.value,
-                    }))
-                  }
-                  min={today}
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
                   className="reservas-form-input"
                   required
                 />
@@ -829,13 +388,8 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
                   <label className="reservas-form-label">Hora Inicio</label>
                   <input
                     type="time"
-                    value={formData.horaInicio}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        horaInicio: event.target.value,
-                      }))
-                    }
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                     className="reservas-form-input"
                     required
                   />
@@ -844,13 +398,8 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
                   <label className="reservas-form-label">Hora Fin</label>
                   <input
                     type="time"
-                    value={formData.horaFin}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        horaFin: event.target.value,
-                      }))
-                    }
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                     className="reservas-form-input"
                     required
                   />
@@ -860,25 +409,15 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
               <div className="reservas-form-actions">
                 <button
                   type="submit"
-                  className={`reservas-form-btn ${
-                    view === 'edit' ? 'reservas-form-btn-edit' : 'reservas-form-btn-primary'
-                  }`}
-                  disabled={submitting}
+                  className="reservas-form-btn reservas-form-btn-primary"
                 >
                   <Check className="reservas-form-btn-icon" />
-                  {submitting
-                    ? view === 'edit'
-                      ? 'Guardando...'
-                      : 'Creando...'
-                    : view === 'edit'
-                      ? 'Guardar Cambios'
-                      : 'Crear Reserva'}
+                  Crear Reserva
                 </button>
                 <button
                   type="button"
-                  onClick={handleBackToList}
+                  onClick={() => setView('list')}
                   className="reservas-form-btn reservas-form-btn-secondary"
-                  disabled={submitting}
                 >
                   Cancelar
                 </button>
@@ -887,6 +426,110 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
           </div>
         )}
 
+        {/* Formulario Editar Reserva */}
+        {view === 'edit' && (
+          <div className="reservas-form-container">
+            <div className="reservas-form-header">
+              <h2 className="reservas-form-title">Editar Reserva</h2>
+              <button
+                onClick={() => {
+                  setView('list');
+                  setSelectedReservation(null);
+                }}
+                className="reservas-form-close"
+              >
+                <X className="reservas-form-close-icon" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleUpdateReservation(); }} className="reservas-form">
+              <div className="reservas-form-group">
+                <label className="reservas-form-label">Ubicación</label>
+                <select
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="reservas-form-select"
+                  required
+                >
+                  <option value="">Selecciona una ubicación</option>
+                  <option value="Biblioteca Central">Biblioteca Central</option>
+                  <option value="Laboratorio de Computación">Laboratorio de Computación</option>
+                  <option value="Sala de Reuniones">Sala de Reuniones</option>
+                  <option value="Auditorio">Auditorio</option>
+                </select>
+              </div>
+
+              <div className="reservas-form-group">
+                <label className="reservas-form-label">Recurso</label>
+                <input
+                  type="text"
+                  value={formData.resource}
+                  onChange={(e) => setFormData({ ...formData, resource: e.target.value })}
+                  placeholder="Ej: Mesa #12, PC #08, Sala A"
+                  className="reservas-form-input"
+                  required
+                />
+              </div>
+
+              <div className="reservas-form-group">
+                <label className="reservas-form-label">Fecha</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="reservas-form-input"
+                  required
+                />
+              </div>
+
+              <div className="reservas-form-grid">
+                <div className="reservas-form-group">
+                  <label className="reservas-form-label">Hora Inicio</label>
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    className="reservas-form-input"
+                    required
+                  />
+                </div>
+                <div className="reservas-form-group">
+                  <label className="reservas-form-label">Hora Fin</label>
+                  <input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    className="reservas-form-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="reservas-form-actions">
+                <button
+                  type="submit"
+                  className="reservas-form-btn reservas-form-btn-edit"
+                >
+                  <Check className="reservas-form-btn-icon" />
+                  Guardar Cambios
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('list');
+                    setSelectedReservation(null);
+                  }}
+                  className="reservas-form-btn reservas-form-btn-secondary"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Vista de Disponibilidad */}
         {view === 'availability' && (
           <div className="reservas-availability-container">
             <div className="reservas-availability-info">
@@ -895,83 +538,58 @@ export const ReservasScreen: React.FC<ReservasScreenProps> = ({
               </p>
             </div>
 
-            {espaciosLoading ? (
-              <div className="reservas-loading">
-                <Loader2 className="reservas-loading-icon" />
-                Cargando espacios disponibles...
-              </div>
-            ) : espaciosError ? (
-              <div className="reservas-empty">
-                <AlertCircle className="reservas-empty-icon" />
-                <h3 className="reservas-empty-title">No pudimos cargar los espacios</h3>
-                <p className="reservas-empty-description">{espaciosError}</p>
-                <button onClick={loadEspacios} className="reservas-empty-btn">
-                  Reintentar
-                </button>
-              </div>
-            ) : availabilityData.length === 0 ? (
-              <div className="reservas-empty">
-                <Calendar className="reservas-empty-icon" />
-                <h3 className="reservas-empty-title">No hay espacios registrados</h3>
-                <p className="reservas-empty-description">
-                  Aún no existen espacios disponibles para mostrar.
-                </p>
-              </div>
-            ) : (
-              availabilityData.map((location) => (
-                <div key={location.locationId} className="reservas-availability-location">
-                  <h3 className="reservas-availability-location-title">{location.locationName}</h3>
-                  <div className="reservas-availability-grid">
-                    {location.resources.map((resource) => (
-                      <div
-                        key={resource.id}
-                        className={`reservas-availability-card ${
-                          resource.available
-                            ? 'reservas-availability-available'
-                            : 'reservas-availability-unavailable'
-                        }`}
-                      >
-                        <div className="reservas-availability-card-header">
-                          <h4 className="reservas-availability-resource-name">{resource.name}</h4>
-                          <span
-                            className={`reservas-availability-status ${
-                              resource.available
-                                ? 'reservas-availability-status-available'
-                                : 'reservas-availability-status-unavailable'
-                            }`}
-                          >
-                            {resource.available ? 'Disponible' : 'No disponible'}
-                          </span>
-                        </div>
-                        <p className="reservas-availability-info">
-                          {resource.details} • {escuelaNombre(resource.escuelaId)}
-                        </p>
-                        {resource.equipamiento && (
-                          <p className="reservas-availability-info">
-                            Equipamiento: {resource.equipamiento}
-                          </p>
-                        )}
-                        {resource.available && (
-                          <button
-                            onClick={() =>
-                              handleShowNewForm({
-                                locationId: String(resource.facultadId),
-                                espacioId: String(resource.id),
-                                fechaReserva: today,
-                                descripcion: `Reserva de ${resource.name}`,
-                              })
-                            }
-                            className="reservas-availability-btn"
-                          >
-                            Reservar Ahora
-                          </button>
-                        )}
+            {availabilityData.map((location, idx) => (
+              <div key={idx} className="reservas-availability-location">
+                <h3 className="reservas-availability-location-title">{location.location}</h3>
+                <div className="reservas-availability-grid">
+                  {location.resources.map((resource, ridx) => (
+                    <div
+                      key={ridx}
+                      className={`reservas-availability-card ${
+                        resource.available
+                          ? 'reservas-availability-available'
+                          : 'reservas-availability-unavailable'
+                      }`}
+                    >
+                      <div className="reservas-availability-card-header">
+                        <h4 className="reservas-availability-resource-name">{resource.name}</h4>
+                        <span
+                          className={`reservas-availability-status ${
+                            resource.available
+                              ? 'reservas-availability-status-available'
+                              : 'reservas-availability-status-unavailable'
+                          }`}
+                        >
+                          {resource.available ? 'Disponible' : 'Ocupado'}
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                      <p className="reservas-availability-info">
+                        {resource.available
+                          ? 'Disponible ahora'
+                          : `Próxima disponibilidad: ${resource.nextAvailable}`}
+                      </p>
+                      {resource.available && (
+                        <button
+                          onClick={() => {
+                            setFormData({
+                              location: location.location,
+                              resource: resource.name,
+                              date: new Date().toISOString().split('T')[0],
+                              startTime: '',
+                              endTime: ''
+                            });
+                            setView('new');
+                          }}
+                          className="reservas-availability-btn"
+                        >
+                          Reservar Ahora
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
         )}
       </main>
