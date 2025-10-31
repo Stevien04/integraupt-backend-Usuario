@@ -63,6 +63,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [reservaModalSuccess, setReservaModalSuccess] = useState<string | null>(null);
   const [mostrarEstadoReservas, setMostrarEstadoReservas] = useState(false);
   const [estadoReservasFiltro, setEstadoReservasFiltro] = useState<EstadoReservasFiltro>('pending');
+  const [estadoReservasBusqueda, setEstadoReservasBusqueda] = useState('');
   const [reservaMotivoVisibleId, setReservaMotivoVisibleId] = useState<string | null>(null);
 
     const estadoReservasInfo: Record<EstadoReservasFiltro, { label: string; descripcion: string }> = {
@@ -166,10 +167,54 @@ const bloquesOrdenados = useMemo(() => {
       });
   }, [bloquesCatalogo, ordenBloques]);
 
- const reservasFiltradasPorEstado = useMemo(
-    () => reservacionesEspacios.filter(reserva => reserva.status === estadoReservasFiltro),
-    [estadoReservasFiltro, reservacionesEspacios]
-  );
+ const reservasFiltradasPorEstado = useMemo(() => {
+     const terminoBusqueda = estadoReservasBusqueda.trim().toLowerCase();
+
+     const normalizarTexto = (texto: string) =>
+       texto
+         .normalize('NFD')
+         .replace(/[\u0300-\u036f]/g, '')
+         .toLowerCase();
+
+     const terminoNormalizado = normalizarTexto(terminoBusqueda);
+
+     const coincideBusqueda = (nombre: string) => {
+       if (!terminoNormalizado) {
+         return true;
+       }
+
+       return normalizarTexto(nombre).includes(terminoNormalizado);
+     };
+
+     const obtenerMarcaTiempo = (reserva: Reservacion) => {
+       if (!reserva.date) {
+         return 0;
+       }
+
+       const fecha = new Date(reserva.date);
+
+       if (Number.isNaN(fecha.getTime())) {
+         return 0;
+       }
+
+       if (reserva.startTime) {
+         const [horas, minutos] = reserva.startTime.split(':').map(Number);
+
+         if (!Number.isNaN(horas) && !Number.isNaN(minutos)) {
+           fecha.setHours(horas, minutos, 0, 0);
+         }
+       }
+
+       return fecha.getTime();
+     };
+
+     return reservacionesEspacios
+       .filter(reserva => reserva.status === estadoReservasFiltro)
+       .filter(reserva => coincideBusqueda(reserva.resource))
+       .slice()
+       .sort((a, b) => obtenerMarcaTiempo(b) - obtenerMarcaTiempo(a));
+   }, [estadoReservasFiltro, estadoReservasBusqueda, reservacionesEspacios]);
+
 
 
   // Estado para formulario de reserva de espacios
@@ -1429,12 +1474,29 @@ const mapaBloques = new Map<number, BloqueHorario>();
                       onClick={() => {
                         setMostrarEstadoReservas(false);
                         setReservaMotivoVisibleId(null);
+                         setEstadoReservasBusqueda('');
                       }}
                       aria-label="Cerrar"
                     >
                       <X className="servicios-estado-modal-close-icon" />
                     </button>
                   </div>
+                   <div className="servicios-estado-search">
+                                      <label className="servicios-estado-search-label" htmlFor="servicios-estado-search-input">
+                                        Buscar laboratorio
+                                      </label>
+                                      <input
+                                        id="servicios-estado-search-input"
+                                        type="text"
+                                        value={estadoReservasBusqueda}
+                                        onChange={(event) => {
+                                          setEstadoReservasBusqueda(event.target.value);
+                                          setReservaMotivoVisibleId(null);
+                                        }}
+                                        placeholder="Escribe el nombre del laboratorio"
+                                        className="servicios-estado-search-input"
+                                      />
+                                    </div>
 
                   <div className="servicios-estado-filters">
                     {(Object.keys(estadoReservasInfo) as EstadoReservasFiltro[]).map((estado) => (
