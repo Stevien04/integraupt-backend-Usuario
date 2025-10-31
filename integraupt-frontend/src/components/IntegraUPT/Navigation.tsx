@@ -1,6 +1,8 @@
 import React from 'react';
 import { GraduationCap, Home, Calendar, User, LogOut, ArrowLeft, Briefcase } from 'lucide-react';
 import { supabase } from '../../utils/supabase/client';
+import { isBackendLoginType } from '../../utils/apiConfig';
+import { requestBackendLogout } from '../../utils/logout';
 import './../../styles/Navigation.css';
 
 interface NavigationProps {
@@ -26,12 +28,16 @@ export const Navigation: React.FC<NavigationProps> = ({
   onBackToDashboard
 }) => {
   const handleLogout = async () => {
-    if (user.user_metadata.login_type === 'administrative' || user.user_metadata.login_type === 'academic') {
+     const loginType = user.user_metadata.login_type;
+        if (isBackendLoginType(loginType)) {
+          await requestBackendLogout(user.id);
+          localStorage.removeItem('backend_session');
       localStorage.removeItem('admin_session');
       window.location.reload();
-    } else {
-      await supabase.auth.signOut();
+      return;
     }
+  localStorage.removeItem('backend_session');
+    await supabase.auth.signOut();
   };
 
   const handleSectionClick = (section: 'home' | 'servicios' | 'eventos' | 'perfil') => {

@@ -11,7 +11,7 @@ import {
   Shield
 } from 'lucide-react';
 import '../styles/LoginScreen.css';
-
+import { API_BASE_URL } from '../utils/apiConfig';
 type LoginType = 'academic' | 'administrative';
 
 interface BackendPerfil {
@@ -55,7 +55,7 @@ interface BackendSessionPayload {
   perfil: BackendPerfil | null;
 }
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
+
 
 const generateCaptcha = () => {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

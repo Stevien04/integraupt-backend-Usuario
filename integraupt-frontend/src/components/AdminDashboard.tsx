@@ -4,6 +4,8 @@ import './../styles/AdminDashboard.css';
 import { GestionEspacios, GestionHorarios, ReportesEstadisticas } from './GestionAdmin';
 import { GestionUsuarios } from './GestionAdmin';
 import { GestionReservas } from './GestionAdmin/GestionReservas';
+import { requestBackendLogout } from '../utils/logout';
+import { isBackendLoginType } from '../utils/apiConfig';
 
 interface User {
   id: string;
@@ -72,7 +74,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+      if (isBackendLoginType(user.user_metadata.login_type)) {
+        await requestBackendLogout(user.id);
+        localStorage.removeItem('backend_session');
+      }
     localStorage.removeItem('admin_session');
     window.location.reload();
   };

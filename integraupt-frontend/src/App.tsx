@@ -3,6 +3,8 @@ import { supabase } from './utils/supabase/client';
 import { LoginScreen } from './components/LoginScreen';
 import { Dashboard } from './components/Dashboard';
 import './styles/App.css';
+import { isBackendLoginType } from './utils/apiConfig';
+import { sendLogoutBeacon } from './utils/logout';
 
 interface User {
   id: string;
@@ -145,6 +147,35 @@ function App() {
             window.removeEventListener('backend-login', handleBackendLogin as EventListener);
     };
   }, []);
+useEffect(() => {
+    const userId = user?.id;
+    const loginType = user?.user_metadata?.login_type;
+
+    if (!userId || !isBackendLoginType(loginType)) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleBeforeUnload = () => {
+      sendLogoutBeacon(userId);
+    };
+
+    const handlePageHide = () => {
+      sendLogoutBeacon(userId);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [user?.id, user?.user_metadata?.login_type]);
+
 
   if (loading) {
     return (
