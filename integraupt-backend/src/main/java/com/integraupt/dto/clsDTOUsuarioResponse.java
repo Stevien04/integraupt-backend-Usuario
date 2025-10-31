@@ -70,6 +70,7 @@ public class clsDTOUsuarioResponse {
         private String genero;
         private Integer estado;
         private String fechaCreacion;
+        private String password;
 
         public UsuarioDTO() {
         }
@@ -79,7 +80,7 @@ public class clsDTOUsuarioResponse {
                           Integer facultadId, String facultadNombre,
                           Integer escuelaId, String escuelaNombre,
                           String rol, String genero, Integer estado,
-                          String fechaCreacion) {
+                          String fechaCreacion, String password) {
             this.id = id;
             this.codigo = codigo;
             this.nombres = nombres;
@@ -96,6 +97,7 @@ public class clsDTOUsuarioResponse {
             this.genero = genero;
             this.estado = estado;
             this.fechaCreacion = fechaCreacion;
+            this.password = password;
         }
 
         public Integer getId() {
@@ -224,6 +226,14 @@ public class clsDTOUsuarioResponse {
 
         public void setFechaCreacion(String fechaCreacion) {
             this.fechaCreacion = fechaCreacion;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
         }
     }
 }

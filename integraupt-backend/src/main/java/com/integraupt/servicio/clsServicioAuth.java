@@ -3,6 +3,8 @@ package com.integraupt.servicio;
 import com.integraupt.dto.clsDTOLoginRequest;
 import com.integraupt.dto.clsDTOLoginResponse;
 import com.integraupt.dto.clsDTOLoginResponse.PerfilDTO;
+import com.integraupt.dto.clsDTOLogoutRequest;
+import com.integraupt.dto.clsDTOLogoutResponse;
 import com.integraupt.entidad.clsEntidadUsuario;
 import com.integraupt.repositorio.clsRepositorioAuth;
 import java.nio.charset.StandardCharsets;
@@ -16,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.util.Locale;
 import java.util.Map;
-
 /**
  * Servicio encargado de manejar la lógica de autenticación de usuarios.
  */
@@ -64,9 +65,11 @@ public class clsServicioAuth {
 
 
     private final clsRepositorioAuth repositorioAuth;
+    private final clsServicioPassword servicioPassword;
 
-    public clsServicioAuth(clsRepositorioAuth repositorioAuth) {
+    public clsServicioAuth(clsRepositorioAuth repositorioAuth, clsServicioPassword servicioPassword) {
         this.repositorioAuth = repositorioAuth;
+        this.servicioPassword = servicioPassword;
     }
 
     /**
@@ -75,7 +78,7 @@ public class clsServicioAuth {
      * @param request datos del login
      * @return respuesta con el resultado del proceso de autenticación
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public clsDTOLoginResponse autenticarUsuario(clsDTOLoginRequest request) {
         if (request == null) {
             return clsDTOLoginResponse.error("La solicitud es inválida");
@@ -83,13 +86,13 @@ public class clsServicioAuth {
 
         String identificador = normalizar(request.getCodigoOEmail());
         String password = normalizar(request.getPassword());
-        String tipoLogin = normalizar(request.getTipoLogin());
+        String tipoLogin = normalizarTipoLogin(request.getTipoLogin());
 
         if (!StringUtils.hasText(identificador) || !StringUtils.hasText(password)) {
             return clsDTOLoginResponse.error("Debe proporcionar usuario y contraseña");
         }
 
-        Optional<clsEntidadUsuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador, tipoLogin);
+        Optional<clsEntidadUsuario> usuarioOpt = buscarUsuarioPorIdentificador(identificador);
 
         if (usuarioOpt.isEmpty()) {
             LOGGER.warn("Intento de acceso con identificador no encontrado: {}", identificador);
@@ -97,6 +100,21 @@ public class clsServicioAuth {
         }
 
         clsEntidadUsuario usuario = usuarioOpt.get();
+
+        if (!coincideConTipoLogin(usuario, tipoLogin)) {
+            LOGGER.warn("Intento de acceso con tipo no permitido. Usuario: {} Tipo: {}", identificador, tipoLogin);
+            return clsDTOLoginResponse.error("El tipo de acceso seleccionado no está permitido para este usuario");
+        }
+
+        if (usuario.getEstado() != null && usuario.getEstado() == 0) {
+            LOGGER.warn("Intento de acceso con usuario inactivo: {}", identificador);
+            return clsDTOLoginResponse.error("El usuario se encuentra inactivo");
+        }
+
+        if (Boolean.TRUE.equals(usuario.getSesion())) {
+            LOGGER.warn("Intento de acceso con sesión activa: {}", identificador);
+            return clsDTOLoginResponse.error("Ya existe una sesión iniciada con estas credenciales");
+        }
 
         if (!validarPassword(password, usuario.getPassword())) {
             LOGGER.warn("Contraseña incorrecta para el usuario: {}", identificador);
@@ -106,46 +124,50 @@ public class clsServicioAuth {
         PerfilDTO perfilDTO = construirPerfil(usuario, tipoLogin);
         String token = generarTokenBasico(usuario);
 
+        usuario.setSesion(Boolean.TRUE);
+        repositorioAuth.save(usuario);
+
         return clsDTOLoginResponse.success("Inicio de sesión exitoso", perfilDTO, token);
     }
 
-    private Optional<clsEntidadUsuario> buscarUsuarioPorIdentificador(String identificador, String tipoLogin) {
+    private Optional<clsEntidadUsuario> buscarUsuarioPorIdentificador(String identificador) {
         Optional<clsEntidadUsuario> usuario = repositorioAuth.findFirstByCodigoIgnoreCase(identificador)
                 .or(() -> repositorioAuth.findFirstByEmailIgnoreCase(identificador));
-        if (usuario.isEmpty()) {
-            return usuario;
-            }
-
-
-        if (!StringUtils.hasText(tipoLogin)) {
-            return usuario;
-        }
-
-        return usuario.filter(value -> coincideConTipoLogin(value, tipoLogin));
+        return usuario;
     }
 
     private String normalizar(String valor) {
         return valor != null ? valor.trim() : null;
     }
+    private String normalizarTipoLogin(String valor) {
+        String normalizado = normalizar(valor);
+        if (!StringUtils.hasText(normalizado)) {
+            return "academic";
+        }
+        return normalizado.toLowerCase(Locale.ROOT);
+    }
+
 
     private boolean validarPassword(String passwordIngresada, String passwordAlmacenada) {
-        if (!StringUtils.hasText(passwordAlmacenada)) {
-            return false;
+        return servicioPassword.matches(passwordIngresada, passwordAlmacenada);
+    }
+
+    @Transactional
+    public clsDTOLogoutResponse cerrarSesion(clsDTOLogoutRequest request) {
+        if (request == null || request.getUsuarioId() == null) {
+            return clsDTOLogoutResponse.error("La solicitud es inválida");
         }
 
-        if (passwordAlmacenada.startsWith("$2a$") || passwordAlmacenada.startsWith("$2b$")
-                || passwordAlmacenada.startsWith("$2y$")) {
-            try {
-                org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder =
-                        new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
-                return encoder.matches(passwordIngresada, passwordAlmacenada);
-            } catch (Exception ex) {
-                LOGGER.error("Error validando contraseña encriptada", ex);
-                return false;
-            }
+        Optional<clsEntidadUsuario> usuarioOpt = repositorioAuth.findById(request.getUsuarioId());
+        if (usuarioOpt.isEmpty()) {
+            return clsDTOLogoutResponse.error("Usuario no encontrado");
         }
 
-        return passwordAlmacenada.equals(passwordIngresada);
+        clsEntidadUsuario usuario = usuarioOpt.get();
+        usuario.setSesion(Boolean.FALSE);
+        repositorioAuth.save(usuario);
+
+        return clsDTOLogoutResponse.success("Sesión cerrada correctamente");
     }
 
     private PerfilDTO construirPerfil(clsEntidadUsuario usuario, String tipoLoginSolicitado) {

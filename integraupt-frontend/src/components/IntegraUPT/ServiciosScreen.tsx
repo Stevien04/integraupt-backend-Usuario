@@ -400,7 +400,6 @@ const closeReservaModal = () => {
     const endHours = hours + Math.floor(endMinutes / 60);
     const endTime = `${endHours.toString().padStart(2, '0')}:${(endMinutes % 60).toString().padStart(2, '0')}`;
 
-    // ✅ Aquí debe ir el “=” que Babel dice que falta
     const newCita: Reservacion = {
       id: Date.now().toString(),
       type: 'psicologia',

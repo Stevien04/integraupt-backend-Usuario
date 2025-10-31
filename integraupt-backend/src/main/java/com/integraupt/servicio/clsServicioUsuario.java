@@ -42,11 +42,14 @@ public class clsServicioUsuario {
 
     private final clsRepositorioUsuario repositorioUsuario;
     private final clsServicioCatalogos servicioCatalogos;
+    private final clsServicioPassword servicioPassword;
 
     public clsServicioUsuario(clsRepositorioUsuario repositorioUsuario,
-                              clsServicioCatalogos servicioCatalogos) {
+                              clsServicioCatalogos servicioCatalogos,
+                              clsServicioPassword servicioPassword) {
         this.repositorioUsuario = repositorioUsuario;
         this.servicioCatalogos = servicioCatalogos;
+        this.servicioPassword = servicioPassword;
     }
 
     /**
@@ -113,7 +116,7 @@ public class clsServicioUsuario {
 
         clsEntidadUsuario entidad = new clsEntidadUsuario();
         asignarDatosBasicos(entidad, request, rolId, genero);
-        entidad.setPassword(password);
+        entidad.setPassword(servicioPassword.encriptar(password));
         entidad.setSesion(Boolean.FALSE);
 
         clsEntidadUsuario guardado = repositorioUsuario.save(entidad);
@@ -165,7 +168,7 @@ public class clsServicioUsuario {
             if (password.length() < 6) {
                 return clsDTOUsuarioResponse.error("La contraseña debe tener al menos 6 caracteres");
             }
-            entidad.setPassword(password);
+            entidad.setPassword(servicioPassword.encriptar(password));
         }
 
         clsEntidadUsuario actualizado = repositorioUsuario.save(entidad);
@@ -242,6 +245,14 @@ public class clsServicioUsuario {
         String rol = ID_TO_ROL.getOrDefault(entidad.getRolId(), "ESTUDIANTE");
         String genero = convertirGenero(entidad.getGenero());
 
+        String passwordVisible;
+        try {
+            passwordVisible = servicioPassword.desencriptar(entidad.getPassword());
+        } catch (IllegalStateException ex) {
+            passwordVisible = entidad.getPassword();
+        }
+
+
         return new UsuarioDTO(
                 entidad.getId(),
                 entidad.getCodigo(),
@@ -258,7 +269,8 @@ public class clsServicioUsuario {
                 rol,
                 genero,
                 entidad.getEstado(),
-                null
+                null,
+                passwordVisible
         );
     }
 
@@ -281,9 +293,9 @@ public class clsServicioUsuario {
     }
 
     public List<clsDTOUsuarioResponse.UsuarioDTO> obtenerUsuariosPorRol(Integer rolId) {
-    List<clsEntidadUsuario> usuarios = repositorioUsuario.findByRolId(rolId);
-    return usuarios.stream()
-            .map(this::convertirEntidadADTO)
-            .collect(Collectors.toList());
+        List<clsEntidadUsuario> usuarios = repositorioUsuario.findByRolId(rolId);
+        return usuarios.stream()
+                .map(this::convertirEntidadADTO)
+                .collect(Collectors.toList());
 }
 }

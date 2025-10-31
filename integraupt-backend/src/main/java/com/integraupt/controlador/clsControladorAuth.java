@@ -2,6 +2,8 @@ package com.integraupt.controlador;
 
 import com.integraupt.dto.clsDTOLoginRequest;
 import com.integraupt.dto.clsDTOLoginResponse;
+import com.integraupt.dto.clsDTOLogoutRequest;
+import com.integraupt.dto.clsDTOLogoutResponse;
 import com.integraupt.servicio.clsServicioAuth;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,12 @@ public class clsControladorAuth {
     public ResponseEntity<clsDTOLoginResponse> login(@Valid @RequestBody clsDTOLoginRequest request) {
         clsDTOLoginResponse response = servicioAuth.autenticarUsuario(request);
         HttpStatus status = response.isSuccess() ? HttpStatus.OK : HttpStatus.UNAUTHORIZED;
+        return ResponseEntity.status(status).body(response);
+    }
+    @PostMapping("/logout")
+    public ResponseEntity<clsDTOLogoutResponse> logout(@Valid @RequestBody clsDTOLogoutRequest request) {
+        clsDTOLogoutResponse response = servicioAuth.cerrarSesion(request);
+        HttpStatus status = response.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(response);
     }
 }

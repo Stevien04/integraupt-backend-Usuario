@@ -6,9 +6,11 @@ C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\co
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioBloqueHorario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOBloqueHorario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorUsuario.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOLogoutResponse.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadHorarioCurso.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\ReportesController.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOCursoHorarioResponse.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOLogoutRequest.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOCursoHorarioRequest.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOHorarioResponse.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioHorarioCurso.java
@@ -25,6 +27,7 @@ C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dt
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioCatalogos.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorEspacio.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioUsuario.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\clsServicioPassword.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOEspacioRequest.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOReservaUsuarioRequest.java

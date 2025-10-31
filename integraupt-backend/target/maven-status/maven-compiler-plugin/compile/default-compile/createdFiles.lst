@@ -20,10 +20,13 @@ com\integraupt\dto\clsDTOUsuarioRequest.class
 com\integraupt\entidad\clsEntidadEspacio.class
 com\integraupt\controlador\clsControladorHorario.class
 com\integraupt\dto\clsDTOEspacioResponse.class
+com\integraupt\dto\clsDTOLogoutRequest.class
 com\integraupt\config\clsConfigCors.class
 com\integraupt\controlador\ReportesController.class
+com\integraupt\servicio\clsServicioPassword.class
 com\integraupt\repositorio\clsRepositorioUsuarioReserva.class
 com\integraupt\servicio\clsServicioCatalogos.class
+com\integraupt\dto\clsDTOLogoutResponse.class
 com\integraupt\entidad\clsEntidadEspacio_Reserva.class
 com\integraupt\repositorio\clsRepositorioEspacio.class
 com\integraupt\entidad\clsEntidadBloqueHorario.class
