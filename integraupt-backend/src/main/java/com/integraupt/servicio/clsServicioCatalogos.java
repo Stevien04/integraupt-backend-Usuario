@@ -1,10 +1,30 @@
 package com.integraupt.servicio;
 
+import com.integraupt.dto.clsDTOBloqueHorario;
+import com.integraupt.entidad.clsEntidadBloqueHorario;
+import com.integraupt.repositorio.clsRepositorioBloqueHorario;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class clsServicioCatalogos {
+
+    private static final DateTimeFormatter HORA_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    private final clsRepositorioBloqueHorario repositorioBloqueHorario;
+
+    public clsServicioCatalogos(clsRepositorioBloqueHorario repositorioBloqueHorario) {
+        this.repositorioBloqueHorario = repositorioBloqueHorario;
+    }
+
 
     // Mapeo de facultades (ID -> Nombre)
     private static final Map<Integer, String> FACULTADES = Map.of(
@@ -39,29 +59,29 @@ public class clsServicioCatalogos {
         Map.entry(19, "Arquitectura")
     );
 
-    // Mapeo de bloques horarios (ID -> Información)
-    private static final Map<Integer, BloqueHorarioInfo> BLOQUES_HORARIOS = Map.of(
-        10, new BloqueHorarioInfo("B1", "08:00:00", "08:50:00"),
-        11, new BloqueHorarioInfo("B2", "08:50:00", "09:40:00"),
-        13, new BloqueHorarioInfo("B3", "09:40:00", "10:30:00")
-        // Agregar más bloques según sea necesario
-    );
+
 
     /**
      * Clase interna para información de bloques horarios
      */
     public static class BloqueHorarioInfo {
-        private String nombre;
-        private String horaInicio;
-        private String horaFinal;
+        private final Integer id;
+        private final Integer orden;
+        private final String nombre;
+        private final String horaInicio;
+        private final String horaFinal;
 
-        public BloqueHorarioInfo(String nombre, String horaInicio, String horaFinal) {
+        public BloqueHorarioInfo(Integer id, Integer orden, String nombre, String horaInicio, String horaFinal) {
+            this.id = id;
+            this.orden = orden;
             this.nombre = nombre;
             this.horaInicio = horaInicio;
             this.horaFinal = horaFinal;
         }
 
         // Getters
+        public Integer getId() { return id; }
+        public Integer getOrden() { return orden; }
         public String getNombre() { return nombre; }
         public String getHoraInicio() { return horaInicio; }
         public String getHoraFinal() { return horaFinal; }
@@ -72,25 +92,48 @@ public class clsServicioCatalogos {
      */
     public BloqueHorarioInfo obtenerBloqueHorario(Integer bloqueId) {
         if (bloqueId == null) {
-            return new BloqueHorarioInfo("Bloque no especificado", "N/A", "N/A");
+            return new BloqueHorarioInfo(null, null, "Bloque no especificado", "N/A", "N/A");
         }
-        return BLOQUES_HORARIOS.getOrDefault(bloqueId, 
-            new BloqueHorarioInfo("Bloque " + bloqueId, "N/A", "N/A"));
+        return repositorioBloqueHorario.findById(bloqueId)
+                .map(this::mapearABloqueInfo)
+                .orElseGet(() -> new BloqueHorarioInfo(bloqueId, null, "Bloque " + bloqueId, "N/A", "N/A"));
     }
 
     /**
      * Obtener nombre de bloque horario por ID
      */
     public String obtenerNombreBloque(Integer bloqueId) {
-        BloqueHorarioInfo bloque = obtenerBloqueHorario(bloqueId);
-        return bloque.getNombre();
+        return Optional.ofNullable(obtenerBloqueHorario(bloqueId))
+                .map(BloqueHorarioInfo::getNombre)
+                .orElse("Bloque " + bloqueId);
     }
 
     /**
      * Obtener todos los bloques horarios disponibles
      */
     public Map<Integer, BloqueHorarioInfo> obtenerTodosLosBloques() {
-        return BLOQUES_HORARIOS;
+        return repositorioBloqueHorario.findAll(Sort.by(Sort.Direction.ASC, "orden")).stream()
+                .collect(Collectors.toMap(
+                        clsEntidadBloqueHorario::getId,
+                        this::mapearABloqueInfo,
+                        (existing, replacement) -> existing,
+                        LinkedHashMap::new
+                ));
+    }
+
+    /**
+     * Obtener bloques horarios en orden como lista DTO
+     */
+    public List<clsDTOBloqueHorario> obtenerBloquesHorariosOrdenados() {
+        return repositorioBloqueHorario.findAll(Sort.by(Sort.Direction.ASC, "orden")).stream()
+                .map(bloque -> new clsDTOBloqueHorario(
+                        bloque.getId(),
+                        bloque.getOrden(),
+                        bloque.getNombre(),
+                        formatearHora(bloque.getHoraInicio()),
+                        formatearHora(bloque.getHoraFin())
+                ))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -131,9 +174,7 @@ public class clsServicioCatalogos {
      * Obtener escuelas por facultad
      */
     public Map<Integer, String> obtenerEscuelasPorFacultad(Integer facultadId) {
-        // Filtramos las escuelas que pertenecen a la facultad
-        // Esto asume que las escuelas 1-6 son de FAING (1), 7 de FADE (2), etc.
-        // Ajustar según la relación real en tu BD
+
         return ESCUELAS.entrySet().stream()
                 .filter(entry -> escuelaPerteneceAFacultad(entry.getKey(), facultadId))
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -152,5 +193,21 @@ public class clsServicioCatalogos {
         if (facultadId == 5) return escuelaId >= 16 && escuelaId <= 18; // FACSA
         if (facultadId == 6) return escuelaId == 19; // FAU
         return false;
+    }
+    private BloqueHorarioInfo mapearABloqueInfo(clsEntidadBloqueHorario bloque) {
+        return new BloqueHorarioInfo(
+                bloque.getId(),
+                bloque.getOrden(),
+                bloque.getNombre(),
+                formatearHora(bloque.getHoraInicio()),
+                formatearHora(bloque.getHoraFin())
+        );
+    }
+
+    private String formatearHora(LocalTime hora) {
+        if (hora == null) {
+            return "N/A";
+        }
+        return hora.format(HORA_FORMATTER);
     }
 }

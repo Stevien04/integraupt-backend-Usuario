@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, Check, Clock, Calendar, Users, BookOpen } from 'lucide-react';
-import { horariosService } from '../IntegraUPT/services/horariosService';
+import { horariosService, type BloqueHorarioCatalogoMap } from '../IntegraUPT/services/horariosService';
 import { espaciosService } from '../IntegraUPT/services/espaciosService';
 import { usuariosService } from '../IntegraUPT/services/usuariosService';
 import type { CursoHorario, CursoHorarioFormData } from '../IntegraUPT/types';
@@ -18,6 +18,7 @@ export const GestionHorarios: React.FC<GestionHorariosProps> = ({ onAuditLog }) 
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [docentes, setDocentes] = useState<any[]>([]);
+  const [bloquesDisponibles, setBloquesDisponibles] = useState<BloqueHorarioCatalogoMap>(horariosService.getBloquesHorarios());
 
   const [formData, setFormData] = useState<CursoHorarioFormData>({
     curso: '',
@@ -54,6 +55,19 @@ export const GestionHorarios: React.FC<GestionHorariosProps> = ({ onAuditLog }) 
 
   useEffect(() => {
     loadData();
+  }, []);
+
+useEffect(() => {
+    const cargarBloques = async () => {
+      try {
+        const bloques = await horariosService.fetchBloquesHorarios();
+        setBloquesDisponibles({ ...bloques });
+      } catch (error) {
+        console.error('Error cargando bloques horarios:', error);
+      }
+    };
+
+    cargarBloques();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -199,7 +213,6 @@ export const GestionHorarios: React.FC<GestionHorariosProps> = ({ onAuditLog }) 
     curso.ubicacion.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const bloquesDisponibles = horariosService.getBloquesHorarios();
   const diasSemana = horariosService.getDiasSemana();
 
   return (

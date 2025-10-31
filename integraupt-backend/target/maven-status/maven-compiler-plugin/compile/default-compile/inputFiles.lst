@@ -4,6 +4,7 @@ C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\re
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioUsuarioReserva.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\ExportacionController.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioBloqueHorario.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOBloqueHorario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorUsuario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\entidad\clsEntidadHorarioCurso.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\ReportesController.java
@@ -45,6 +46,7 @@ C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dt
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorHorarioCurso.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\ReservasMesDTO.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\ReportesService.java
+C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\controlador\clsControladorBloqueHorario.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\repositorio\clsRepositorioHorarioCurso.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\servicio\ExportacionService.java
 C:\integraupt-backend-Usuario\integraupt-backend\src\main\java\com\integraupt\dto\clsDTOLoginRequest.java

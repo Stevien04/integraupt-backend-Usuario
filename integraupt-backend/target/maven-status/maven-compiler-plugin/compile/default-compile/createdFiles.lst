@@ -4,11 +4,13 @@ com\integraupt\servicio\ReportesService.class
 com\integraupt\dto\clsDTOUsuarioResponse$UsuarioDTO.class
 com\integraupt\repositorio\clsRepositorioEspacioReserva.class
 com\integraupt\IntegraUPTApplication.class
+com\integraupt\dto\clsDTOBloqueHorario.class
 com\integraupt\servicio\clsServicioEspacio.class
 com\integraupt\controlador\clsControladorAuth.class
 com\integraupt\controlador\clsControladorEspacio.class
 com\integraupt\repositorio\clsRepositorioBloqueHorario.class
 com\integraupt\entidad\clsEntidadUsuario.class
+com\integraupt\controlador\clsControladorBloqueHorario.class
 com\integraupt\dto\clsDTOLoginResponse$PerfilDTO.class
 com\integraupt\dto\clsDTOCursoHorarioResponse.class
 com\integraupt\controlador\clsControladorReserva.class

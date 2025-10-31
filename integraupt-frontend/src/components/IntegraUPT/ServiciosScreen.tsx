@@ -5,7 +5,7 @@ import './../../styles/ServiciosScreen.css';
 import { espaciosService } from './services/espaciosService';
 import { reservasService } from './services/reservasService';
 import { serviciosScreenService, type HorarioCompleto } from './services/serviciosScreenService';
-import { horariosService } from './services/horariosService';
+import { horariosService, type BloqueHorarioCatalogoMap } from './services/horariosService';
 
 import type { Espacio, Reservacion } from './types';
 
@@ -55,14 +55,48 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [horariosEspacios, setHorariosEspacios] = useState<Record<string, HorarioCompleto[]>>({});
   const [horariosCargando, setHorariosCargando] = useState(false);
 
-  const bloquesCatalogo = useMemo(() => horariosService.getBloquesHorarios(), []);
-    const ordenBloques = useMemo(() => {
-      const mapaOrden = new Map<number, number>();
-      Object.keys(bloquesCatalogo).forEach((id, index) => {
+ const [bloquesCatalogo, setBloquesCatalogo] = useState<BloqueHorarioCatalogoMap>(horariosService.getBloquesHorarios());
+   const [bloquesCargando, setBloquesCargando] = useState(true);
+   const [bloquesError, setBloquesError] = useState<string | null>(null);
+
+   useEffect(() => {
+     let activo = true;
+
+     const cargarBloques = async () => {
+       try {
+         const bloques = await horariosService.fetchBloquesHorarios();
+         if (activo) {
+           setBloquesCatalogo({ ...bloques });
+           setBloquesError(null);
+         }
+       } catch (error) {
+         console.error('Error al cargar bloques horarios:', error);
+         if (activo) {
+           setBloquesError('No se pudieron cargar los bloques horarios desde la base de datos.');
+         }
+       } finally {
+         if (activo) {
+           setBloquesCargando(false);
+         }
+       }
+     };
+
+     cargarBloques();
+
+     return () => {
+       activo = false;
+     };
+   }, []);
+
+   const ordenBloques = useMemo(() => {
+     const mapaOrden = new Map<number, number>();
+     Object.entries(bloquesCatalogo)
+       .sort(([, a], [, b]) => (a.orden ?? Number.MAX_SAFE_INTEGER) - (b.orden ?? Number.MAX_SAFE_INTEGER))
+       .forEach(([id], index) => {
         mapaOrden.set(Number(id), index);
       });
-      return mapaOrden;
-    }, [bloquesCatalogo]);
+         return mapaOrden;
+        }, [bloquesCatalogo]);
 
     const formatearHora = (hora?: string | null) => {
       if (!hora || hora === 'N/A') {
@@ -81,11 +115,8 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
 
     const obtenerOrdenBloque = (bloqueId: number) => {
       const bloqueCatalogo = bloquesCatalogo[bloqueId];
-      if (bloqueCatalogo?.nombre) {
-        const match = bloqueCatalogo.nombre.match(/(\d+)/);
-        if (match) {
-          return parseInt(match[0], 10);
-        }
+     if (bloqueCatalogo?.orden != null) {
+            return bloqueCatalogo.orden;
       }
       const ordenCatalogo = ordenBloques.get(bloqueId);
       return ordenCatalogo !== undefined ? ordenCatalogo + 1 : bloqueId;
@@ -699,6 +730,9 @@ const mapaBloques = new Map<number, BloqueHorario>();
               </div>
               ) : (
               <>
+               {bloquesError && (
+                                <div className="servicios-horario-error">{bloquesError}</div>
+                              )}
                 <div className="servicios-horario-table-container">
                  {bloquesDisponibles.length === 0 ? (
                                      <div className="servicios-horario-empty">

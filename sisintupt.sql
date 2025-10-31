@@ -57,16 +57,18 @@ CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
   `HoraInicio` time NOT NULL,
   `HoraFinal` time NOT NULL,
   PRIMARY KEY (`IdBloque`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.bloqueshorarios: ~6 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.bloqueshorarios: ~8 rows (aproximadamente)
 INSERT INTO `bloqueshorarios` (`IdBloque`, `Orden`, `Nombre`, `HoraInicio`, `HoraFinal`) VALUES
 	(10, 1, 'B1', '08:00:00', '08:50:00'),
 	(11, 2, 'B2', '08:50:00', '09:40:00'),
 	(13, 3, 'B3', '09:40:00', '10:30:00'),
 	(14, 4, 'B4', '10:30:00', '11:20:00'),
 	(15, 5, 'B5', '11:20:00', '12:10:00'),
-	(16, 6, 'B6', '12:10:00', '12:50:00');
+	(16, 6, 'B6', '12:10:00', '12:50:00'),
+	(17, 7, 'B7', '13:40:00', '14:30:00'),
+	(18, 8, 'B8', '14:30:00', '16:00:00');
 
 -- Volcando estructura para tabla sisintupt.escuela
 CREATE TABLE IF NOT EXISTS `escuela` (
@@ -159,9 +161,9 @@ CREATE TABLE IF NOT EXISTS `horarios` (
   KEY `FK_horario_bloque` (`bloque`) USING BTREE,
   CONSTRAINT `FK_horario_bloque` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_horario_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=843 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=969 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.horarios: ~240 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.horarios: ~288 rows (aproximadamente)
 INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`) VALUES
 	(258, 1, 10, 'Lunes', 1),
 	(259, 1, 10, 'Martes', 0),
@@ -450,7 +452,103 @@ INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`
 	(824, 8, 16, 'Miercoles', 0),
 	(825, 8, 16, 'Jueves', 0),
 	(826, 8, 16, 'Viernes', 0),
-	(827, 8, 16, 'Sabado', 0);
+	(827, 8, 16, 'Sabado', 0),
+	(843, 1, 17, 'Lunes', 0),
+	(844, 1, 17, 'Martes', 0),
+	(845, 1, 17, 'Miercoles', 0),
+	(846, 1, 17, 'Jueves', 0),
+	(847, 1, 17, 'Viernes', 0),
+	(848, 1, 17, 'Sabado', 0),
+	(849, 2, 17, 'Lunes', 0),
+	(850, 2, 17, 'Martes', 0),
+	(851, 2, 17, 'Miercoles', 0),
+	(852, 2, 17, 'Jueves', 0),
+	(853, 2, 17, 'Viernes', 0),
+	(854, 2, 17, 'Sabado', 0),
+	(855, 3, 17, 'Lunes', 0),
+	(856, 3, 17, 'Martes', 0),
+	(857, 3, 17, 'Miercoles', 0),
+	(858, 3, 17, 'Jueves', 0),
+	(859, 3, 17, 'Viernes', 0),
+	(860, 3, 17, 'Sabado', 0),
+	(861, 4, 17, 'Lunes', 0),
+	(862, 4, 17, 'Martes', 0),
+	(863, 4, 17, 'Miercoles', 0),
+	(864, 4, 17, 'Jueves', 0),
+	(865, 4, 17, 'Viernes', 0),
+	(866, 4, 17, 'Sabado', 0),
+	(867, 5, 17, 'Lunes', 0),
+	(868, 5, 17, 'Martes', 0),
+	(869, 5, 17, 'Miercoles', 0),
+	(870, 5, 17, 'Jueves', 0),
+	(871, 5, 17, 'Viernes', 0),
+	(872, 5, 17, 'Sabado', 0),
+	(873, 6, 17, 'Lunes', 0),
+	(874, 6, 17, 'Martes', 0),
+	(875, 6, 17, 'Miercoles', 0),
+	(876, 6, 17, 'Jueves', 0),
+	(877, 6, 17, 'Viernes', 0),
+	(878, 6, 17, 'Sabado', 0),
+	(879, 7, 17, 'Lunes', 0),
+	(880, 7, 17, 'Martes', 0),
+	(881, 7, 17, 'Miercoles', 0),
+	(882, 7, 17, 'Jueves', 0),
+	(883, 7, 17, 'Viernes', 0),
+	(884, 7, 17, 'Sabado', 0),
+	(885, 8, 17, 'Lunes', 0),
+	(886, 8, 17, 'Martes', 0),
+	(887, 8, 17, 'Miercoles', 0),
+	(888, 8, 17, 'Jueves', 0),
+	(889, 8, 17, 'Viernes', 0),
+	(890, 8, 17, 'Sabado', 0),
+	(906, 1, 18, 'Lunes', 0),
+	(907, 1, 18, 'Martes', 0),
+	(908, 1, 18, 'Miercoles', 0),
+	(909, 1, 18, 'Jueves', 0),
+	(910, 1, 18, 'Viernes', 0),
+	(911, 1, 18, 'Sabado', 0),
+	(912, 2, 18, 'Lunes', 0),
+	(913, 2, 18, 'Martes', 0),
+	(914, 2, 18, 'Miercoles', 0),
+	(915, 2, 18, 'Jueves', 0),
+	(916, 2, 18, 'Viernes', 0),
+	(917, 2, 18, 'Sabado', 0),
+	(918, 3, 18, 'Lunes', 0),
+	(919, 3, 18, 'Martes', 0),
+	(920, 3, 18, 'Miercoles', 0),
+	(921, 3, 18, 'Jueves', 0),
+	(922, 3, 18, 'Viernes', 0),
+	(923, 3, 18, 'Sabado', 0),
+	(924, 4, 18, 'Lunes', 0),
+	(925, 4, 18, 'Martes', 0),
+	(926, 4, 18, 'Miercoles', 0),
+	(927, 4, 18, 'Jueves', 0),
+	(928, 4, 18, 'Viernes', 0),
+	(929, 4, 18, 'Sabado', 0),
+	(930, 5, 18, 'Lunes', 0),
+	(931, 5, 18, 'Martes', 0),
+	(932, 5, 18, 'Miercoles', 0),
+	(933, 5, 18, 'Jueves', 0),
+	(934, 5, 18, 'Viernes', 0),
+	(935, 5, 18, 'Sabado', 0),
+	(936, 6, 18, 'Lunes', 0),
+	(937, 6, 18, 'Martes', 0),
+	(938, 6, 18, 'Miercoles', 0),
+	(939, 6, 18, 'Jueves', 0),
+	(940, 6, 18, 'Viernes', 0),
+	(941, 6, 18, 'Sabado', 0),
+	(942, 7, 18, 'Lunes', 0),
+	(943, 7, 18, 'Martes', 0),
+	(944, 7, 18, 'Miercoles', 0),
+	(945, 7, 18, 'Jueves', 0),
+	(946, 7, 18, 'Viernes', 0),
+	(947, 7, 18, 'Sabado', 0),
+	(948, 8, 18, 'Lunes', 0),
+	(949, 8, 18, 'Martes', 0),
+	(950, 8, 18, 'Miercoles', 0),
+	(951, 8, 18, 'Jueves', 0),
+	(952, 8, 18, 'Viernes', 0),
+	(953, 8, 18, 'Sabado', 0);
 
 -- Volcando estructura para tabla sisintupt.horario_curso
 CREATE TABLE IF NOT EXISTS `horario_curso` (
