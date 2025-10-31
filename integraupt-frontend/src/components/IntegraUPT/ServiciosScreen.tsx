@@ -690,19 +690,32 @@ const mapaBloques = new Map<number, BloqueHorario>();
           <div>
             <button
               onClick={() => {
-                             setSelectedService('menu');
-                             setView('list');
-                             setFormSuccessMessage(null);
-                           }}
+                            setSelectedService('menu');
+                                           setView('list');
+                                           setFormSuccessMessage(null);
+                                         }}
               className="servicios-back-btn"
             >
               <ArrowLeft className="servicios-back-icon" />
               Volver a Servicios
             </button>
 
-            <div className="servicios-header">
-              <h1 className="servicios-title">Espacios Disponibles</h1>
-              <p className="servicios-subtitle">Selecciona un espacio para ver su horario semanal</p>
+             <div className="servicios-espacios-header">
+                          <div className="servicios-header">
+                            <h1 className="servicios-title">Espacios Disponibles</h1>
+                            <p className="servicios-subtitle">Selecciona un espacio para ver su horario semanal</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setEstadoReservasFiltro('pending');
+                              setReservaMotivoVisibleId(null);
+                              setMostrarEstadoReservas(true);
+                            }}
+                            className="servicios-action-btn servicios-action-btn-info servicios-estado-inline-btn"
+                          >
+                            <ClipboardList className="servicios-action-btn-icon" />
+                            Mis reservas
+                          </button>
             </div>
 
             <div className="servicios-espacios-grid">
