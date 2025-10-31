@@ -1,23 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Navigation } from './Navigation';
 import { Calendar, Clock, MapPin, Search, Plus, Edit, Trash2, X, Check, Server, Monitor, MessageCircle, ArrowLeft, Eye, Building2, BookOpen, Users as UsersIcon } from 'lucide-react';
 import './../../styles/ServiciosScreen.css';
 import { espaciosService } from './services/espaciosService';
 import { reservasService } from './services/reservasService';
-import { horariosService } from './services/horariosService';
-import { serviciosScreenService } from './services/serviciosScreenService';
-
+import { serviciosScreenService, type HorarioCompleto } from './services/serviciosScreenService';
 
 import type { Espacio, Reservacion } from './types';
 
-interface HorarioCurso {
-  id: string;
-  curso: string;
-  profesor: string;
-  startTime: string;
-  endTime: string;
-  days: string;
-  students: string;
+interface BloqueHorario {
+  id: number;
+  label: string;
+  horaInicio: string;
+  horaFinal: string;
 }
 
 interface ServiciosScreenProps {
@@ -55,7 +50,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   // Estados para datos reales
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [reservacionesEspacios, setReservacionesEspacios] = useState<Reservacion[]>([]);
-  const [horariosEspacios, setHorariosEspacios] = useState<Record<string, HorarioCurso[]>>({});
+  const [horariosEspacios, setHorariosEspacios] = useState<Record<string, HorarioCompleto[]>>({});
   const [horariosCargando, setHorariosCargando] = useState(false);
   // Estado para formulario de reserva de espacios
   const [espaciosForm, setEspaciosForm] = useState({
@@ -302,27 +297,9 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
 
       console.log('Horarios completos recibidos:', horariosCompletos);
 
-      // Mapear a formato para la tabla
-      const horariosMapeados: Record<string, HorarioCurso[]> = {};
-      horariosMapeados[espacio.id] = [];
 
-      // Solo horarios ocupados con cursos
-      horariosCompletos
-        .filter(horario => horario.ocupado && horario.curso)
-        .forEach(horario => {
-          horariosMapeados[espacio.id].push({
-            id: horario.id,
-            curso: horario.curso!,
-            profesor: horario.docente || 'Docente no asignado',
-            startTime: horario.horaInicio,
-            endTime: horario.horaFinal,
-            days: horario.diaSemana,
-            students: '25'
-          });
-        });
-
-      console.log('Horarios finales para tabla:', horariosMapeados);
-      setHorariosEspacios(horariosMapeados);
+      console.log('Horarios finales para tabla:', horariosCompletos);
+      setHorariosEspacios({ [espacio.id]: horariosCompletos });
       setView('horario-semanal');
 
     } catch (error) {
@@ -334,26 +311,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     }
   };
 
-// Función simple para encontrar coincidencias
-const cursoCoincideConHorario = (curso: any, horario: any): boolean => {
-  // Lógica básica - ajustar según tu BD
-  return curso.dias.includes(horario.diaSemana.substring(0, 3));
-};
 
-  // Función para extraer startTime y endTime del string de horario
-  const extraerInfoHorario = (horarioString: string): { startTime: string, endTime: string } => {
-    if (!horarioString) {
-      return { startTime: '08:00', endTime: '09:40' }; // Default
-    }
-
-    // Ejemplo: "09:40 - 10:30" -> startTime: "09:40", endTime: "10:30"
-    const partes = horarioString.split(' - ');
-    if (partes.length === 2) {
-      return { startTime: partes[0].trim(), endTime: partes[1].trim() };
-    }
-
-    return { startTime: '08:00', endTime: '09:40' }; // Fallback
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -393,89 +351,68 @@ const cursoCoincideConHorario = (curso: any, horario: any): boolean => {
     }
   };
 
-  // Generar bloques de tiempo de 50 minutos desde 08:00 hasta 22:00
-  const generateTimeSlots = () => {
-    const slots = [];
-    let hour = 8;
-    let minute = 0;
+    const normalizarDia = (dia: string) =>
+        dia
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
 
-    while (hour < 22) {
-      const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      minute += 50;
-      if (minute >= 60) {
-        hour += Math.floor(minute / 60);
-        minute = minute % 60;
-      }
-      const endTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      slots.push(`${startTime}-${endTime}`);
+      const diasTabla = [
+        { clave: 'Lunes', etiqueta: 'Lunes' },
+        { clave: 'Martes', etiqueta: 'Martes' },
+        { clave: 'Miercoles', etiqueta: 'Miércoles' },
+        { clave: 'Jueves', etiqueta: 'Jueves' },
+        { clave: 'Viernes', etiqueta: 'Viernes' },
+        { clave: 'Sabado', etiqueta: 'Sábado' }
+      ];
 
-      minute += 10; // Descanso de 10 minutos
-      if (minute >= 60) {
-        hour += Math.floor(minute / 60);
-        minute = minute % 60;
-      }
-    }
-    return slots;
-  };
+      const horariosSeleccionados = selectedEspacio
+        ? horariosEspacios[selectedEspacio.id] || []
+        : [];
 
-  const timeSlots = generateTimeSlots();
-
-  // Función para verificar si un curso ocupa un bloque de tiempo en un día específico
-  const getCursoInSlot = (day: string, timeSlot: string) => {
-    if (!selectedEspacio) return null;
-
-    const horarios = horariosEspacios[selectedEspacio.id] || [];
-    const [slotStart] = timeSlot.split('-');
-
-    console.log('Buscando curso para:', day, slotStart, 'Horarios disponibles:', horarios);
-
-    for (const horario of horarios) {
-      // Verificar si el curso se imparte en este día
-      const diasCurso = horario.days ? horario.days.split('-') : [horario.days];
-
-      // Convertir día abreviado a formato completo para comparar
-      const diaCompletoMap: Record<string, string> = {
-        'Lun': 'Lunes',
-        'Mar': 'Martes',
-        'Mié': 'Miercoles',
-        'Jue': 'Jueves',
-        'Vie': 'Viernes',
-        'Sáb': 'Sabado'
-      };
-      const diaCompleto = diaCompletoMap[day] || day;
-
-      // Verificar si alguno de los días del curso coincide
-      const coincideDia = diasCurso.some(diaCurso => {
-        const diaCursoCompleto = diaCompletoMap[diaCurso] || diaCurso;
-        return diaCursoCompleto === diaCompleto;
-      });
-
-      console.log('Curso:', horario.curso, 'Días del curso:', diasCurso, 'Día buscado:', diaCompleto, 'Coincide:', coincideDia);
-
-      if (coincideDia) {
-        // Verificar si el slot está dentro del rango del curso
-        if (slotStart >= horario.startTime && slotStart < horario.endTime) {
-          console.log('✅ Curso encontrado:', horario.curso);
-          return horario;
-        }
-      }
+      const bloquesDisponibles: BloqueHorario[] = useMemo(() => {
+        if (!horariosSeleccionados.length) {
+          return [];
     }
 
-    console.log('❌ No se encontró curso para', day, slotStart);
-    return null;
-  };
 
-  // Función auxiliar para convertir abreviación a día completo
-  const getDiaCompleto = (diaAbrev: string): string => {
-    const diasMap: Record<string, string> = {
-      'Lun': 'Lunes',
-      'Mar': 'Martes',
-      'Mié': 'Miercoles',
-      'Jue': 'Jueves',
-      'Vie': 'Viernes',
-      'Sáb': 'Sabado'
-    };
-    return diasMap[diaAbrev] || diaAbrev;
+  const mapaBloques = new Map<number, BloqueHorario>();
+
+   horariosSeleccionados.forEach(horario => {
+         if (!mapaBloques.has(horario.bloqueId)) {
+           const label = horario.bloqueNombre && horario.bloqueNombre.trim().length > 0
+             ? horario.bloqueNombre
+             : `${horario.horaInicio} - ${horario.horaFinal}`;
+
+     mapaBloques.set(horario.bloqueId, {
+              id: horario.bloqueId,
+              label,
+              horaInicio: horario.horaInicio,
+              horaFinal: horario.horaFinal
+            });
+          }
+        });
+
+    return Array.from(mapaBloques.values()).sort((a, b) =>
+         a.horaInicio.localeCompare(b.horaInicio)
+       );
+     }, [horariosSeleccionados]);
+
+
+       const obtenerHorarioParaCelda = (dia: string, bloqueId: number) => {
+         if (!horariosSeleccionados.length) {
+           return null;
+    }
+
+    const diaNormalizado = normalizarDia(dia);
+
+  return (
+        horariosSeleccionados.find(horario =>
+          horario.bloqueId === bloqueId &&
+          normalizarDia(horario.diaSemana) === diaNormalizado
+        ) || null
+      );
   };
 
   return (
@@ -717,52 +654,62 @@ const cursoCoincideConHorario = (curso: any, horario: any): boolean => {
               ) : (
               <>
                 <div className="servicios-horario-table-container">
-                  <table className="servicios-horario-table">
-                    <thead>
-                      <tr className="servicios-horario-header">
-                        <th className="servicios-horario-th servicios-horario-time-header">
-                          Horario
-                        </th>
-                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((day) => (
-                          <th key={day} className="servicios-horario-th">
-                            {day}
+                 {bloquesDisponibles.length === 0 ? (
+                                     <div className="servicios-horario-empty">
+                                       No se encontraron bloques de horarios configurados para este espacio.
+                                     </div>
+                                   ) : (
+                                     <table className="servicios-horario-table">
+                                       <thead>
+                                         <tr className="servicios-horario-header">
+                                           <th className="servicios-horario-th servicios-horario-time-header">
+                                             Horario
                           </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timeSlots.map((timeSlot) => (
-                        <tr key={timeSlot} className="servicios-horario-row">
-                          <td className="servicios-horario-time">
-                            {timeSlot}
-                          </td>
-                          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => {
-                            const curso = getCursoInSlot(day, timeSlot);
-                            return (
-                              <td
-                                key={day}
-                                className={`servicios-horario-cell ${
-                                  curso
-                                    ? 'servicios-horario-cell-ocupado'
-                                    : 'servicios-horario-cell-disponible'
-                                }`}
-                              >
-                                {curso ? (
-                                  <div className="servicios-horario-curso">
-                                    <div className="servicios-horario-curso-nombre">{curso.curso}</div>
-                                    <div className="servicios-horario-curso-profesor">{curso.profesor}</div>
-                                    <div className="servicios-horario-curso-estudiantes">{curso.students} estudiantes</div>
-                                  </div>
-                                ) : (
-                                  <div className="servicios-horario-vacio">Disponible</div>
-                                )}
-                              </td>
-                            );
-                          })}
+                       {diasTabla.map(dia => (
+                                                  <th key={dia.clave} className="servicios-horario-th">
+                                                    {dia.etiqueta}
+                                                  </th>
+                                                ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                       </thead>
+                                            <tbody>
+                                              {bloquesDisponibles.map(bloque => (
+                                                <tr key={bloque.id} className="servicios-horario-row">
+                                                  <td className="servicios-horario-time">
+                                                    {bloque.label}
+                                                  </td>
+                                                  {diasTabla.map(dia => {
+                                                    const horarioCelda = obtenerHorarioParaCelda(dia.clave, bloque.id);
+                                                    const estaOcupado = Boolean(horarioCelda?.ocupado && horarioCelda?.curso);
+
+                                                    return (
+                                                      <td
+                                                        key={`${dia.clave}-${bloque.id}`}
+                                                        className={`servicios-horario-cell ${
+                                                          estaOcupado
+                                                            ? 'servicios-horario-cell-ocupado'
+                                                            : 'servicios-horario-cell-disponible'
+                                                        }`}
+                                                      >
+                                                        {estaOcupado && horarioCelda ? (
+                                                          <div className="servicios-horario-curso">
+                                                            <div className="servicios-horario-curso-nombre">{horarioCelda.curso}</div>
+                                                            <div className="servicios-horario-curso-profesor">{horarioCelda.docente || 'Docente no asignado'}</div>
+                                                            <div className="servicios-horario-curso-estudiantes">
+                                                              {horarioCelda.horaInicio} - {horarioCelda.horaFinal}
+                                                            </div>
+                                                          </div>
+                                                        ) : (
+                                                          <div className="servicios-horario-vacio">Disponible</div>
+                                                        )}
+                                                      </td>
+                                                    );
+                                                  })}
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        )}
                 </div>
 
                 <div className="servicios-horario-leyenda">
