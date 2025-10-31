@@ -59,6 +59,8 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [bloquesCatalogo, setBloquesCatalogo] = useState<BloqueHorarioCatalogoMap>(horariosService.getBloquesHorarios());
   const [bloquesCargando, setBloquesCargando] = useState(true);
   const [bloquesError, setBloquesError] = useState<string | null>(null);
+  const [formSuccessMessage, setFormSuccessMessage] = useState<string | null>(null);
+  const [reservaModalSuccess, setReservaModalSuccess] = useState<string | null>(null);
 
    useEffect(() => {
      let activo = true;
@@ -243,6 +245,7 @@ const bloquesOrdenados = useMemo(() => {
   const handleCreateEspacio = async () => {
     try {
       setLoading(true);
+      setFormSuccessMessage(null);
 
       // Crear la descripción con ciclo y curso
       const descripcion = `Ciclo: ${espaciosForm.ciclo} - Curso: ${espaciosForm.curso}`;
@@ -270,9 +273,7 @@ const bloquesOrdenados = useMemo(() => {
       await cargarReservaciones();
 
       setEspaciosForm({ type: 'laboratorio', resource: '', date: '', startTime: '', endTime: '', ciclo: '', curso: '' });
-      setView('list');
-
-      alert('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
+      setFormSuccessMessage('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
 
     } catch (err) {
       setError('Error al crear la reserva');
@@ -285,6 +286,7 @@ const bloquesOrdenados = useMemo(() => {
   const handleReservarEspacio = (espacio: Espacio) => {
     setEspacioToReserve(espacio);
     setReservaModalError(null);
+    setReservaModalSuccess(null);
     setReservaRapidaForm({
       ciclo: '',
       curso: '',
@@ -297,12 +299,31 @@ const bloquesOrdenados = useMemo(() => {
     setShowReservaModal(true);
   };
 
+const closeReservaModal = () => {
+    setShowReservaModal(false);
+    setReservaModalError(null);
+    setReservaModalSuccess(null);
+    setEspacioToReserve(null);
+    setReservaRapidaForm({
+      ciclo: '',
+      curso: '',
+      date: '',
+      bloqueId: '',
+      startTime: '',
+      endTime: '',
+      motivo: ''
+    });
+  };
+
+
   const handleSubmitReservaRapida = async () => {
     if (!espacioToReserve) return;
 
     try {
       setLoading(true);
       setReservaModalError(null);
+      setReservaModalSuccess(null);
+
 
             if (!reservaRapidaForm.bloqueId) {
               setReservaModalError('Selecciona un bloque horario disponible antes de enviar tu solicitud.');
@@ -351,12 +372,17 @@ const bloquesOrdenados = useMemo(() => {
       // Recargar reservaciones
       await cargarReservaciones();
 
-      setShowReservaModal(false);
-      setEspacioToReserve(null);
-       setReservaModalError(null);
-
-      // Mostrar mensaje de éxito
-      alert('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
+     setReservaModalError(null);
+           setReservaModalSuccess('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
+           setReservaRapidaForm({
+             ciclo: '',
+             curso: '',
+             date: '',
+             bloqueId: '',
+             startTime: '',
+             endTime: '',
+             motivo: ''
+           });
 
     } catch (err) {
       setError('Error al crear la reserva');
@@ -374,6 +400,7 @@ const bloquesOrdenados = useMemo(() => {
     const endHours = hours + Math.floor(endMinutes / 60);
     const endTime = `${endHours.toString().padStart(2, '0')}:${(endMinutes % 60).toString().padStart(2, '0')}`;
 
+    // ✅ Aquí debe ir el “=” que Babel dice que falta
     const newCita: Reservacion = {
       id: Date.now().toString(),
       type: 'psicologia',
@@ -384,6 +411,7 @@ const bloquesOrdenados = useMemo(() => {
       status: 'pending',
       motivo: citasForm.motivo
     };
+
     setCitasPsicologia([...citasPsicologia, newCita]);
     setCitasForm({ date: '', startTime: '', motivo: '' });
     setView('list');
@@ -636,7 +664,11 @@ const mapaBloques = new Map<number, BloqueHorario>();
         {selectedService === 'espacios' && view === 'espacios-grid' && !loading && !error && (
           <div>
             <button
-              onClick={() => setSelectedService('menu')}
+              onClick={() => {
+                             setSelectedService('menu');
+                             setView('list');
+                             setFormSuccessMessage(null);
+                           }}
               className="servicios-back-btn"
             >
               <ArrowLeft className="servicios-back-icon" />
@@ -883,7 +915,11 @@ const mapaBloques = new Map<number, BloqueHorario>();
         {selectedService === 'espacios' && view === 'list' && (
           <div>
             <button
-              onClick={() => setSelectedService('menu')}
+               onClick={() => {
+                              setSelectedService('menu');
+                              setView('list');
+                              setFormSuccessMessage(null);
+                            }}
               className="servicios-back-btn"
             >
               <ArrowLeft className="servicios-back-icon" />
@@ -897,14 +933,20 @@ const mapaBloques = new Map<number, BloqueHorario>();
 
             <div className="servicios-actions">
               <button
-                onClick={() => setView('espacios-grid')}
+                onClick={() => {
+                                  setView('espacios-grid');
+                                  setFormSuccessMessage(null);
+                                }}
                 className="servicios-action-btn servicios-action-btn-primary"
               >
                 <Eye className="servicios-action-btn-icon" />
                 Ver Horarios de Espacios
               </button>
               <button
-                onClick={() => setView('new')}
+                  onClick={() => {
+                                  setView('new');
+                                  setFormSuccessMessage(null);
+                                }}
                 className="servicios-action-btn servicios-action-btn-success"
               >
                 <Plus className="servicios-action-btn-icon" />
@@ -1002,13 +1044,18 @@ const mapaBloques = new Map<number, BloqueHorario>();
             <div className="servicios-form-header">
               <h2 className="servicios-form-title">Nueva Reserva de Espacio</h2>
               <button
-                onClick={() => setView('list')}
+                  onClick={() => {
+                                  setView('list');
+                                  setFormSuccessMessage(null);
+                                }}
                 className="servicios-form-close"
               >
                 <X className="servicios-form-close-icon" />
               </button>
             </div>
-
+ {formSuccessMessage && (
+              <div className="servicios-form-success">{formSuccessMessage}</div>
+            )}
             <form onSubmit={(e) => { e.preventDefault(); handleCreateEspacio(); }} className="servicios-form">
               <div className="servicios-form-group">
                 <label className="servicios-form-label">Tipo de Espacio</label>
@@ -1117,7 +1164,10 @@ const mapaBloques = new Map<number, BloqueHorario>();
                 </button>
                 <button
                   type="button"
-                  onClick={() => setView('list')}
+                  onClick={() => {
+                                      setView('list');
+                                      setFormSuccessMessage(null);
+                                    }}
                   className="servicios-form-btn servicios-form-btn-secondary"
                   disabled={loading}
                 >
@@ -1138,10 +1188,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                   <p className="servicios-modal-subtitle">{espacioToReserve.tipo} - {espacioToReserve.facultad}</p>
                 </div>
                 <button
-                  onClick={() => {
-                                      setShowReservaModal(false);
-                                      setReservaModalError(null);
-                                    }}
+                    onClick={closeReservaModal}
                   className="servicios-modal-close"
                   disabled={loading}
                 >
@@ -1155,13 +1202,17 @@ const mapaBloques = new Map<number, BloqueHorario>();
                     <strong>Información del espacio:</strong> {espacioToReserve.ubicacion} | Capacidad: {espacioToReserve.capacidad}
                   </p>
                 </div>
-                   {reservaModalError && (
-                                  <div className="servicios-modal-error">{reservaModalError}</div>
-                                )}
+                  {reservaModalSuccess && (
 
-                                {bloquesError && (
-                                  <div className="servicios-modal-error">{bloquesError}</div>
-                                )}
+                                    <div className="servicios-modal-success">{reservaModalSuccess}</div>
+                                  )}
+                                  {reservaModalError && (
+                                    <div className="servicios-modal-error">{reservaModalError}</div>
+                                  )}
+
+                                  {bloquesError && (
+                                    <div className="servicios-modal-error">{bloquesError}</div>
+                                  )}
 
                 <div className="servicios-form-grid">
                   <div className="servicios-form-group">
@@ -1171,7 +1222,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                       onChange={(e) => setReservaRapidaForm({ ...reservaRapidaForm, ciclo: e.target.value })}
                       className="servicios-form-input"
                       required
-                      disabled={loading}
+                       disabled={loading || !!reservaModalSuccess}
                     >
                       <option value="">Selecciona ciclo</option>
                       {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'].map(c => (
@@ -1189,7 +1240,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                       placeholder="Ej: Programación Web"
                       className="servicios-form-input"
                       required
-                      disabled={loading}
+                      disabled={loading || !!reservaModalSuccess}
                     />
                   </div>
                 </div>
@@ -1208,45 +1259,44 @@ const mapaBloques = new Map<number, BloqueHorario>();
                 </div>
 
                   <div className="servicios-form-group">
-                                  <label className="servicios-form-label">Bloque horario *</label>
-                                  <select
-                                    value={reservaRapidaForm.bloqueId}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      if (!value) {
-                                        setReservaRapidaForm(prev => ({ ...prev, bloqueId: '', startTime: '', endTime: '' }));
+                                    <label className="servicios-form-label">Bloque horario *</label>
+                                    <select
+                                      value={reservaRapidaForm.bloqueId}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (!value) {
+                                          setReservaRapidaForm(prev => ({ ...prev, bloqueId: '', startTime: '', endTime: '' }));
+                                          setReservaModalError(null);
+                                          return;
+                                        }
+
+                                        const bloqueSeleccionado = bloquesOrdenados.find(b => b.id === Number(value));
+
+                                        setReservaRapidaForm(prev => ({
+                                          ...prev,
+                                          bloqueId: value,
+                                          startTime: bloqueSeleccionado ? bloqueSeleccionado.horaInicio : '',
+                                          endTime: bloqueSeleccionado ? bloqueSeleccionado.horaFinal : ''
+                                        }));
                                         setReservaModalError(null);
-                                        return;
-                                      }
-
-                                      const bloqueSeleccionado = bloquesOrdenados.find(b => b.id === Number(value));
-
-                                      setReservaRapidaForm(prev => ({
-                                        ...prev,
-                                        bloqueId: value,
-                                        startTime: bloqueSeleccionado ? bloqueSeleccionado.horaInicio : '',
-                                        endTime: bloqueSeleccionado ? bloqueSeleccionado.horaFinal : ''
-                                      }));
-                                      setReservaModalError(null);
-                                    }}
-                                    className="servicios-form-select"
-                                    required
-                                    disabled={loading || bloquesCargando || !!bloquesError || bloquesOrdenados.length === 0}
-                                  >
-                                    <option value="">
-                                      {bloquesCargando ? 'Cargando bloques horarios...' : 'Selecciona un bloque disponible'}
-                                    </option>
-                                    {!bloquesCargando && bloquesOrdenados.map(bloque => (
-                                      <option key={bloque.id} value={bloque.id}>
-                                        {bloque.label}
+                                      }}
+                                      className="servicios-form-select"
+                                      required
+                                      disabled={loading || !!reservaModalSuccess || bloquesCargando || !!bloquesError || bloquesOrdenados.length === 0}
+                                    >
+                                      <option value="">
+                                        {bloquesCargando ? 'Cargando bloques horarios...' : 'Selecciona un bloque disponible'}
                                       </option>
-                                    ))}
-                                  </select>
-                                  {!bloquesCargando && !bloquesError && bloquesOrdenados.length === 0 && (
-                                    <p className="servicios-form-help">No se encontraron bloques horarios configurados para reservar.</p>
-                                  )}
-                                </div>
-
+                                      {!bloquesCargando && bloquesOrdenados.map(bloque => (
+                                        <option key={bloque.id} value={bloque.id}>
+                                          {bloque.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {!bloquesCargando && !bloquesError && bloquesOrdenados.length === 0 && (
+                                      <p className="servicios-form-help">No se encontraron bloques horarios configurados para reservar.</p>
+                                    )}
+                                  </div>
 
                 <div className="servicios-form-grid">
                   <div className="servicios-form-group">
@@ -1254,7 +1304,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                     <input
                       type="text"
                       value={reservaRapidaForm.startTime}
-                      placeholder="Selecciona un bloque horario"
+                              placeholder="Selecciona un bloque horario"
                       className="servicios-form-input"
                       readOnly
                       disabled
@@ -1281,7 +1331,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                     placeholder="Describe el motivo de tu reserva..."
                     rows={3}
                     className="servicios-form-textarea"
-                    disabled={loading}
+                     disabled={loading || !!reservaModalSuccess}
                   />
                 </div>
 
@@ -1295,14 +1345,14 @@ const mapaBloques = new Map<number, BloqueHorario>();
                   <button
                     type="submit"
                     className="servicios-modal-btn servicios-modal-btn-primary"
-                    disabled={loading}
+                    disabled={loading || !!reservaModalSuccess}
                   >
                     <Check className="servicios-modal-btn-icon" />
                     {loading ? 'Enviando...' : 'Enviar Solicitud'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowReservaModal(false)}
+                      onClick={closeReservaModal}
                     className="servicios-modal-btn servicios-modal-btn-secondary"
                     disabled={loading}
                   >
