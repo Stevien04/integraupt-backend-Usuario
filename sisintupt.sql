@@ -1,7 +1,7 @@
 -- --------------------------------------------------------
--- Host:                         127.0.0.1
--- Versión del servidor:         10.4.32-MariaDB - mariadb.org binary distribution
--- SO del servidor:              Win64
+-- Host:                         34.55.213.240
+-- Versión del servidor:         8.0.41-google - (Google)
+-- SO del servidor:              Linux
 -- HeidiSQL Versión:             12.11.0.7065
 -- --------------------------------------------------------
 
@@ -16,7 +16,7 @@
 
 
 -- Volcando estructura de base de datos para sisintupt
-CREATE DATABASE IF NOT EXISTS `sisintupt` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
+CREATE DATABASE IF NOT EXISTS `sisintupt` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `sisintupt`;
 
 -- Volcando estructura para evento sisintupt.aplicar_horarios_fijos
@@ -33,35 +33,91 @@ CREATE EVENT `aplicar_horarios_fijos` ON SCHEDULE EVERY 1 DAY STARTS '2025-10-29
 END//
 DELIMITER ;
 
+-- Volcando estructura para procedimiento sisintupt.aprobar_reserva
+DELIMITER //
+CREATE PROCEDURE `aprobar_reserva`(IN p_IdReserva INT)
+BEGIN
+    DECLARE rol_usuario INT;
+    DECLARE esp INT;
+    DECLARE blq INT;
+    DECLARE fecha DATE;
+
+    SELECT usuario, espacio, bloque, fechaReserva
+    INTO rol_usuario, esp, blq, fecha
+    FROM reserva
+    JOIN usuario ON usuario.IdUsuario = reserva.usuario
+    WHERE IdReserva = p_IdReserva;
+
+    UPDATE reserva
+    SET estado = 'Aprobada',
+        Motivo = 'Reserva aceptada'
+    WHERE IdReserva = p_IdReserva;
+
+    IF rol_usuario = 1 THEN
+        UPDATE reserva
+        SET estado = 'Rechazada',
+            Motivo = 'Reserva rechazada - Docente tiene prioridad'
+        WHERE espacio = esp
+        AND fechaReserva = fecha
+        AND bloque = blq
+        AND estado = 'Pendiente'
+        AND IdReserva != p_IdReserva;
+    ELSEIF rol_usuario = 2 THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM reserva r 
+            JOIN usuario u ON r.usuario = u.IdUsuario
+            WHERE r.espacio = esp
+            AND r.fechaReserva = fecha
+            AND r.bloque = blq
+            AND r.estado = 'Pendiente'
+            AND u.Rol = 1
+        ) THEN
+            UPDATE reserva
+            SET estado = 'Rechazada',
+                Motivo = 'Reserva rechazada - Otra reserva fue aprobada primero'
+            WHERE espacio = esp
+            AND fechaReserva = fecha
+            AND bloque = blq
+            AND estado = 'Pendiente'
+            AND IdReserva != p_IdReserva;
+        END IF;
+    END IF;
+END//
+DELIMITER ;
+
 -- Volcando estructura para tabla sisintupt.auditoriareserva
 CREATE TABLE IF NOT EXISTS `auditoriareserva` (
-  `IdAudit` int(11) NOT NULL AUTO_INCREMENT,
-  `IdReserva` int(11) NOT NULL,
-  `EstadoAnterior` varchar(50) DEFAULT NULL,
-  `EstadoNuevo` varchar(50) DEFAULT NULL,
-  `FechaCambio` datetime DEFAULT current_timestamp(),
-  `UsuarioCambio` int(11) DEFAULT NULL,
+  `IdAudit` int NOT NULL AUTO_INCREMENT,
+  `IdReserva` int NOT NULL,
+  `EstadoAnterior` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `EstadoNuevo` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `FechaCambio` datetime DEFAULT CURRENT_TIMESTAMP,
+  `UsuarioCambio` int DEFAULT NULL,
   PRIMARY KEY (`IdAudit`),
   KEY `FK_auditoriareserva_reserva` (`IdReserva`),
   KEY `FK_auditoriareserva_usuario` (`UsuarioCambio`),
   CONSTRAINT `FK_auditoriareserva_reserva` FOREIGN KEY (`IdReserva`) REFERENCES `reserva` (`IdReserva`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_auditoriareserva_usuario` FOREIGN KEY (`UsuarioCambio`) REFERENCES `usuario` (`IdUsuario`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.auditoriareserva: ~6 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.auditoriareserva: ~7 rows (aproximadamente)
 INSERT INTO `auditoriareserva` (`IdAudit`, `IdReserva`, `EstadoAnterior`, `EstadoNuevo`, `FechaCambio`, `UsuarioCambio`) VALUES
 	(1, 21, 'Pendiente', 'Aprobada', '2025-10-29 11:53:37', 7),
 	(2, 21, 'Aprobada', 'Pendiente', '2025-10-29 11:56:17', 7),
 	(3, 21, 'Pendiente', 'Aprobada', '2025-10-29 11:56:48', 7),
 	(4, 22, 'Pendiente', 'Aprobada', '2025-10-31 03:20:30', 11),
 	(5, 24, 'Pendiente', 'Aprobada', '2025-10-31 04:09:52', 7),
-	(6, 19, 'Aprobada', 'Pendiente', '2025-10-31 09:11:58', 5);
+	(6, 25, 'Pendiente', 'Aprobada', '2025-10-31 13:41:36', 11),
+	(7, 26, 'Pendiente', 'Aprobada', '2025-10-31 13:42:03', 10),
+	(8, 27, 'Pendiente', 'Aprobada', '2025-10-31 18:48:59', 7),
+	(9, 29, 'Pendiente', 'Aprobada', '2025-10-31 18:54:32', 7);
 
 -- Volcando estructura para tabla sisintupt.bloqueshorarios
 CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
-  `IdBloque` int(11) NOT NULL AUTO_INCREMENT,
-  `Orden` int(11) NOT NULL,
-  `Nombre` varchar(50) NOT NULL,
+  `IdBloque` int NOT NULL AUTO_INCREMENT,
+  `Orden` int NOT NULL,
+  `Nombre` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `HoraInicio` time NOT NULL,
   `HoraFinal` time NOT NULL,
   PRIMARY KEY (`IdBloque`)
@@ -75,12 +131,12 @@ INSERT INTO `bloqueshorarios` (`IdBloque`, `Orden`, `Nombre`, `HoraInicio`, `Hor
 
 -- Volcando estructura para tabla sisintupt.escuela
 CREATE TABLE IF NOT EXISTS `escuela` (
-  `IdEscuela` int(11) NOT NULL AUTO_INCREMENT,
-  `IdFacultad` int(11) NOT NULL,
-  `Nombre` varchar(50) NOT NULL,
+  `IdEscuela` int NOT NULL AUTO_INCREMENT,
+  `IdFacultad` int NOT NULL,
+  `Nombre` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   PRIMARY KEY (`IdEscuela`),
   KEY `FK__facultad` (`IdFacultad`),
-  CONSTRAINT `FK__facultad` FOREIGN KEY (`IdFacultad`) REFERENCES `facultad` (`IdFacultad`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `FK__facultad` FOREIGN KEY (`IdFacultad`) REFERENCES `facultad` (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Volcando datos para la tabla sisintupt.escuela: ~19 rows (aproximadamente)
@@ -107,22 +163,22 @@ INSERT INTO `escuela` (`IdEscuela`, `IdFacultad`, `Nombre`) VALUES
 
 -- Volcando estructura para tabla sisintupt.espacio
 CREATE TABLE IF NOT EXISTS `espacio` (
-  `IdEspacio` int(11) NOT NULL AUTO_INCREMENT,
-  `Codigo` varchar(20) NOT NULL DEFAULT '',
-  `Nombre` varchar(100) NOT NULL,
-  `Tipo` enum('Laboratorio','Salon') NOT NULL DEFAULT 'Laboratorio',
-  `Ubicacion` text DEFAULT NULL,
-  `Capacidad` int(11) NOT NULL,
-  `Equipamiento` text DEFAULT NULL,
-  `Facultad` int(11) NOT NULL,
-  `Escuela` int(11) NOT NULL,
-  `Estado` int(11) NOT NULL DEFAULT 1,
+  `IdEspacio` int NOT NULL AUTO_INCREMENT,
+  `Codigo` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `Nombre` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `Tipo` enum('Laboratorio','Salon') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Laboratorio',
+  `Ubicacion` text COLLATE utf8mb4_general_ci,
+  `Capacidad` int NOT NULL,
+  `Equipamiento` text COLLATE utf8mb4_general_ci,
+  `Facultad` int NOT NULL,
+  `Escuela` int NOT NULL,
+  `Estado` int NOT NULL DEFAULT '1',
   PRIMARY KEY (`IdEspacio`),
   UNIQUE KEY `Codigo` (`Codigo`),
   KEY `FK_espacio_facultad` (`Facultad`),
   KEY `FK_espacio_escuela` (`Escuela`),
-  CONSTRAINT `FK_espacio_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_espacio_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `FK_espacio_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`),
+  CONSTRAINT `FK_espacio_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Volcando datos para la tabla sisintupt.espacio: ~8 rows (aproximadamente)
@@ -138,8 +194,8 @@ INSERT INTO `espacio` (`IdEspacio`, `Codigo`, `Nombre`, `Tipo`, `Ubicacion`, `Ca
 
 -- Volcando estructura para tabla sisintupt.facultad
 CREATE TABLE IF NOT EXISTS `facultad` (
-  `IdFacultad` int(11) NOT NULL AUTO_INCREMENT,
-  `Nombre` varchar(10) NOT NULL,
+  `IdFacultad` int NOT NULL AUTO_INCREMENT,
+  `Nombre` varchar(10) COLLATE utf8mb4_general_ci NOT NULL,
   PRIMARY KEY (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -154,11 +210,11 @@ INSERT INTO `facultad` (`IdFacultad`, `Nombre`) VALUES
 
 -- Volcando estructura para tabla sisintupt.horarios
 CREATE TABLE IF NOT EXISTS `horarios` (
-  `IdHorario` int(11) NOT NULL AUTO_INCREMENT,
-  `espacio` int(11) NOT NULL,
-  `bloque` int(11) NOT NULL,
-  `diaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') NOT NULL,
-  `ocupado` tinyint(1) NOT NULL DEFAULT 0,
+  `IdHorario` int NOT NULL AUTO_INCREMENT,
+  `espacio` int NOT NULL,
+  `bloque` int NOT NULL,
+  `diaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') COLLATE utf8mb4_general_ci NOT NULL,
+  `ocupado` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`IdHorario`) USING BTREE,
   KEY `FK_horario_espacio` (`espacio`) USING BTREE,
   KEY `FK_horario_bloque` (`bloque`) USING BTREE,
@@ -184,13 +240,13 @@ INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`
 	(271, 3, 10, 'Martes', 0),
 	(272, 3, 10, 'Miercoles', 0),
 	(273, 3, 10, 'Jueves', 0),
-	(274, 3, 10, 'Viernes', 0),
+	(274, 3, 10, 'Viernes', 1),
 	(275, 3, 10, 'Sabado', 0),
 	(276, 4, 10, 'Lunes', 0),
 	(277, 4, 10, 'Martes', 0),
 	(278, 4, 10, 'Miercoles', 0),
 	(279, 4, 10, 'Jueves', 0),
-	(280, 4, 10, 'Viernes', 0),
+	(280, 4, 10, 'Viernes', 1),
 	(281, 4, 10, 'Sabado', 0),
 	(282, 5, 10, 'Lunes', 0),
 	(283, 5, 10, 'Martes', 0),
@@ -250,7 +306,7 @@ INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`
 	(352, 7, 11, 'Martes', 0),
 	(353, 7, 11, 'Miercoles', 0),
 	(354, 7, 11, 'Jueves', 0),
-	(355, 7, 11, 'Viernes', 0),
+	(355, 7, 11, 'Viernes', 1),
 	(356, 7, 11, 'Sabado', 0),
 	(357, 8, 11, 'Lunes', 0),
 	(358, 8, 11, 'Martes', 0),
@@ -304,7 +360,7 @@ INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`
 	(454, 8, 13, 'Martes', 0),
 	(455, 8, 13, 'Miercoles', 0),
 	(456, 8, 13, 'Jueves', 0),
-	(457, 8, 13, 'Viernes', 0),
+	(457, 8, 13, 'Viernes', 1),
 	(458, 8, 13, 'Sabado', 0),
 	(459, 6, 13, 'Lunes', 0),
 	(460, 6, 13, 'Martes', 0),
@@ -315,22 +371,22 @@ INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`
 
 -- Volcando estructura para tabla sisintupt.horario_curso
 CREATE TABLE IF NOT EXISTS `horario_curso` (
-  `IdHorarioCurso` int(11) NOT NULL AUTO_INCREMENT,
-  `Curso` varchar(100) NOT NULL,
-  `Docente` int(11) NOT NULL,
-  `Espacio` int(11) NOT NULL,
-  `Bloque` int(11) NOT NULL,
-  `DiaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') NOT NULL,
+  `IdHorarioCurso` int NOT NULL AUTO_INCREMENT,
+  `Curso` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `Docente` int NOT NULL,
+  `Espacio` int NOT NULL,
+  `Bloque` int NOT NULL,
+  `DiaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') COLLATE utf8mb4_general_ci NOT NULL,
   `FechaInicio` date NOT NULL,
   `FechaFin` date NOT NULL,
-  `Estado` tinyint(1) NOT NULL DEFAULT 1,
+  `Estado` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`IdHorarioCurso`),
   KEY `FK_horario_curso_usuario` (`Docente`),
   KEY `FK_horario_curso_espacio` (`Espacio`),
   KEY `FK_horario_curso_bloqueshorarios` (`Bloque`),
-  CONSTRAINT `FK_horario_curso_bloqueshorarios` FOREIGN KEY (`Bloque`) REFERENCES `bloqueshorarios` (`IdBloque`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_horario_curso_espacio` FOREIGN KEY (`Espacio`) REFERENCES `espacio` (`IdEspacio`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_horario_curso_usuario` FOREIGN KEY (`Docente`) REFERENCES `usuario` (`IdUsuario`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `FK_horario_curso_bloqueshorarios` FOREIGN KEY (`Bloque`) REFERENCES `bloqueshorarios` (`IdBloque`),
+  CONSTRAINT `FK_horario_curso_espacio` FOREIGN KEY (`Espacio`) REFERENCES `espacio` (`IdEspacio`),
+  CONSTRAINT `FK_horario_curso_usuario` FOREIGN KEY (`Docente`) REFERENCES `usuario` (`IdUsuario`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Volcando datos para la tabla sisintupt.horario_curso: ~0 rows (aproximadamente)
@@ -358,31 +414,36 @@ DELIMITER ;
 
 -- Volcando estructura para tabla sisintupt.reserva
 CREATE TABLE IF NOT EXISTS `reserva` (
-  `IdReserva` int(11) NOT NULL AUTO_INCREMENT,
-  `usuario` int(11) NOT NULL,
-  `espacio` int(11) NOT NULL,
+  `IdReserva` int NOT NULL AUTO_INCREMENT,
+  `usuario` int NOT NULL,
+  `espacio` int NOT NULL,
   `fechaReserva` date NOT NULL,
-  `bloque` int(11) NOT NULL,
-  `estado` varchar(50) NOT NULL DEFAULT 'Pendiente',
-  `fechaSolicitud` datetime NOT NULL DEFAULT current_timestamp(),
-  `Descripcion` tinytext NOT NULL,
-  `Motivo` tinytext DEFAULT NULL,
+  `bloque` int NOT NULL,
+  `estado` varchar(50) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pendiente',
+  `fechaSolicitud` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `Descripcion` tinytext COLLATE utf8mb4_general_ci NOT NULL,
+  `Motivo` tinytext COLLATE utf8mb4_general_ci,
   PRIMARY KEY (`IdReserva`),
   KEY `FK_reserva_espacio` (`espacio`),
   KEY `FK_reserva_usuario` (`usuario`),
   KEY `FK_reserva_bloqueshorarios` (`bloque`),
-  CONSTRAINT `FK_reserva_bloqueshorarios` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_reserva_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_reserva_usuario` FOREIGN KEY (`usuario`) REFERENCES `usuario` (`IdUsuario`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  CONSTRAINT `FK_reserva_bloqueshorarios` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`),
+  CONSTRAINT `FK_reserva_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`),
+  CONSTRAINT `FK_reserva_usuario` FOREIGN KEY (`usuario`) REFERENCES `usuario` (`IdUsuario`)
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.reserva: ~5 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.reserva: ~7 rows (aproximadamente)
 INSERT INTO `reserva` (`IdReserva`, `usuario`, `espacio`, `fechaReserva`, `bloque`, `estado`, `fechaSolicitud`, `Descripcion`, `Motivo`) VALUES
-	(19, 5, 1, '2025-09-15', 10, 'Pendiente', '2025-09-15 22:44:01', 'Curso:1-Tema:1', NULL),
+	(19, 5, 1, '2025-09-15', 10, 'Aprobada', '2025-09-15 22:44:01', 'Curso:1-Tema:1', NULL),
 	(20, 5, 1, '2025-09-16', 10, 'Cancelado', '2025-09-16 00:33:02', 'Curso:Base de Datos-Tema:Jugar', NULL),
 	(21, 7, 1, '2025-10-29', 11, 'Aprobada', '2025-10-29 11:53:25', 'ojala', 'Reserva aceptada'),
 	(22, 11, 1, '2025-10-31', 13, 'Aprobada', '2025-10-31 03:20:21', '', 'Reserva aceptada'),
-	(24, 7, 5, '2025-10-30', 13, 'Aprobada', '2025-10-31 04:09:44', '', 'Reserva aceptada');
+	(24, 7, 5, '2025-10-30', 13, 'Aprobada', '2025-10-31 04:09:44', '', 'Reserva aceptada'),
+	(25, 11, 3, '2025-10-31', 10, 'Aprobada', '2025-10-31 13:41:31', '', 'Reserva aceptada'),
+	(26, 10, 4, '2025-10-31', 10, 'Aprobada', '2025-10-31 13:41:58', '', 'Reserva aceptada'),
+	(27, 7, 8, '2025-10-31', 13, 'Aprobada', '2025-10-31 13:47:31', 'asdf', 'Reserva aceptada'),
+	(28, 5, 5, '2025-10-31', 11, 'Pendiente', '2025-10-31 13:50:58', 'xddddd', NULL),
+	(29, 7, 7, '2025-10-31', 11, 'Aprobada', '2025-10-31 13:54:18', 'asdfasdf', 'Reserva aceptada');
 
 -- Volcando estructura para evento sisintupt.reset_horarios_domingo
 DELIMITER //
@@ -393,8 +454,8 @@ DELIMITER ;
 
 -- Volcando estructura para tabla sisintupt.rol
 CREATE TABLE IF NOT EXISTS `rol` (
-  `IdRol` int(11) NOT NULL,
-  `Nombre` varchar(15) NOT NULL,
+  `IdRol` int NOT NULL,
+  `Nombre` varchar(15) COLLATE utf8mb4_general_ci NOT NULL,
   PRIMARY KEY (`IdRol`),
   UNIQUE KEY `Nombre` (`Nombre`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -408,21 +469,21 @@ INSERT INTO `rol` (`IdRol`, `Nombre`) VALUES
 
 -- Volcando estructura para tabla sisintupt.usuario
 CREATE TABLE IF NOT EXISTS `usuario` (
-  `IdUsuario` int(11) NOT NULL AUTO_INCREMENT,
-  `Nombre` varchar(30) NOT NULL,
-  `Apellido` varchar(30) NOT NULL,
-  `CodigoU` varchar(20) NOT NULL DEFAULT '',
-  `CorreoU` varchar(30) NOT NULL,
-  `TipoDoc` varchar(30) NOT NULL,
-  `NumDoc` varchar(20) NOT NULL DEFAULT '',
-  `Rol` int(9) NOT NULL,
-  `Facultad` int(11) NOT NULL,
-  `Escuela` int(11) NOT NULL,
-  `Celular` varchar(11) DEFAULT NULL,
+  `IdUsuario` int NOT NULL AUTO_INCREMENT,
+  `Nombre` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `Apellido` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `CodigoU` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `CorreoU` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `TipoDoc` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
+  `NumDoc` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `Rol` int NOT NULL,
+  `Facultad` int NOT NULL,
+  `Escuela` int NOT NULL,
+  `Celular` varchar(11) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `Genero` bit(1) DEFAULT NULL,
-  `Password` varchar(255) NOT NULL DEFAULT '',
-  `Estado` int(11) NOT NULL,
-  `Sesion` tinyint(1) NOT NULL DEFAULT 0,
+  `Password` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `Estado` int NOT NULL,
+  `Sesion` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`IdUsuario`),
   UNIQUE KEY `CodigoU` (`CodigoU`),
   UNIQUE KEY `NumDoc` (`NumDoc`),
@@ -430,26 +491,23 @@ CREATE TABLE IF NOT EXISTS `usuario` (
   KEY `FK_usuario_facultad` (`Facultad`),
   KEY `FK_usuario_escuela` (`Escuela`),
   KEY `FK_usuario_rol` (`Rol`),
-  CONSTRAINT `FK_usuario_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_usuario_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `FK_usuario_rol` FOREIGN KEY (`Rol`) REFERENCES `rol` (`IdRol`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  CONSTRAINT `FK_usuario_escuela` FOREIGN KEY (`Escuela`) REFERENCES `escuela` (`IdEscuela`),
+  CONSTRAINT `FK_usuario_facultad` FOREIGN KEY (`Facultad`) REFERENCES `facultad` (`IdFacultad`),
+  CONSTRAINT `FK_usuario_rol` FOREIGN KEY (`Rol`) REFERENCES `rol` (`IdRol`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.usuario: ~5 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.usuario: ~4 rows (aproximadamente)
 INSERT INTO `usuario` (`IdUsuario`, `Nombre`, `Apellido`, `CodigoU`, `CorreoU`, `TipoDoc`, `NumDoc`, `Rol`, `Facultad`, `Escuela`, `Celular`, `Genero`, `Password`, `Estado`, `Sesion`) VALUES
-	(5, 'STEVIE', 'MARCA', '2023076802', '1@upt.pe', 'DNI', '72405382', 2, 1, 1, '979793902', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
-	(7, 'DAYAN', 'JAHUIRA', '2023076800', 'Dayan@hotmail.com', 'DNI', '12345678', 3, 1, 1, '123456789', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
-	(10, 'STEVIE', 'AGUILAR', '2023076808', 'stevie@upt.edu', 'DNI', '12345679', 3, 1, 1, '987654321', b'1', 'hbL3qY5WhK5fV9wPfqHFOQ==', 1, 0),
-	(11, 'CRISTIAN', 'MAMANI', '2023076801', 'A@upt.pe', 'DNI', '72405638', 3, 1, 1, '979739029', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
-	(13, 'Admin Temporal', 'Prueba', '2023073801', 'admin.temp@upt.edu', 'DNI', '00000000', 3, 1, 1, NULL, NULL, 'JXMNMFknrvtAvRaO12EHRA==', 1, 0);
+	(5, 'STEVIE', 'MARCA', '2023076802', '1@upt.pe', 'DNI', '72405382', 1, 1, 1, '979793902', b'1', 'APRt0kF8p6Kv+q8Zw7EcG/4Ob7WXZE3pNsNzByTy6mg=', 1, 0),
+	(7, 'DAYAN', 'JAHUIRA', '2022075749', 'Dayan@hotmail.com', 'DNI', '12345678', 3, 1, 1, '123456789', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 1),
+	(10, 'STEVIE', 'AGUILAR', '2023076808', 'stevie@upt.edu', 'DNI', '12345679', 3, 1, 1, '987654321', b'1', 'APRt0kF8p6Kv+q8Zw7EcG/4Ob7WXZE3pNsNzByTy6mg=', 1, 0),
+	(11, 'CRISTIAN', 'MAMANI', '2023076801', 'A@upt.pe', 'DNI', '72405638', 3, 1, 1, '979739029', b'1', 'enyx1M2OSSqIcCCNf5Cp3nmup3XCZCqT6mB5ji6kGII=', 1, 0),
+	(13, 'Ejemplo', 'Ejemplo', '2022075714', 'ejemplo@gmail.com', 'PASAPORTE', 'A12345678', 2, 4, 13, '987654321', b'1', 'hbL3qY5WhK5fV9wPfqHFOQ==', 1, 0);
 
 -- Volcando estructura para disparador sisintupt.trg_actualizar_horario_update
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';
 DELIMITER //
-CREATE TRIGGER trg_actualizar_horario_update
-AFTER UPDATE ON reserva
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_actualizar_horario_update` AFTER UPDATE ON `reserva` FOR EACH ROW BEGIN
     DECLARE dia ENUM('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado');
 
     SET dia = CASE DAYOFWEEK(NEW.fechaReserva)
@@ -480,11 +538,11 @@ DELIMITER ;
 SET SQL_MODE=@OLDTMP_SQL_MODE;
 
 -- Volcando estructura para disparador sisintupt.trg_auditoria_reserva
-SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';
+SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 DELIMITER //
 CREATE TRIGGER `trg_auditoria_reserva` AFTER UPDATE ON `reserva` FOR EACH ROW BEGIN
     IF OLD.estado <> NEW.estado THEN
-        INSERT INTO auditoriaReserva (IdReserva, EstadoAnterior, EstadoNuevo, UsuarioCambio)
+        INSERT INTO auditoriareserva (IdReserva, EstadoAnterior, EstadoNuevo, UsuarioCambio)
         VALUES (NEW.IdReserva, OLD.estado, NEW.estado, NEW.usuario);
     END IF;
 END//
@@ -494,10 +552,7 @@ SET SQL_MODE=@OLDTMP_SQL_MODE;
 -- Volcando estructura para disparador sisintupt.trg_bloquear_horario_curso_insert
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
-CREATE TRIGGER trg_bloquear_horario_curso_insert
-AFTER INSERT ON horario_curso
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_bloquear_horario_curso_insert` AFTER INSERT ON `horario_curso` FOR EACH ROW BEGIN
     -- Si la fecha actual está dentro del rango del curso, bloquear inmediatamente
     IF CURDATE() BETWEEN NEW.FechaInicio AND NEW.FechaFin AND NEW.Estado = 1 THEN
         UPDATE horarios 
@@ -513,10 +568,7 @@ SET SQL_MODE=@OLDTMP_SQL_MODE;
 -- Volcando estructura para disparador sisintupt.trg_bloquear_horario_curso_update
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
-CREATE TRIGGER trg_bloquear_horario_curso_update
-AFTER UPDATE ON horario_curso
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_bloquear_horario_curso_update` AFTER UPDATE ON `horario_curso` FOR EACH ROW BEGIN
     -- Liberar el horario anterior si cambió espacio, bloque, día o si el curso expiró/desactivó
     IF (OLD.Estado = 1 AND NEW.Estado = 0) OR 
        (OLD.Estado = 1 AND (NEW.Espacio != OLD.Espacio OR NEW.Bloque != OLD.Bloque OR NEW.DiaSemana != OLD.DiaSemana)) OR
@@ -544,10 +596,7 @@ SET SQL_MODE=@OLDTMP_SQL_MODE;
 -- Volcando estructura para disparador sisintupt.trg_crear_horarios
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';
 DELIMITER //
-CREATE TRIGGER trg_crear_horarios
-AFTER INSERT ON bloqueshorarios
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_crear_horarios` AFTER INSERT ON `bloqueshorarios` FOR EACH ROW BEGIN
     -- Insertar horarios automáticamente para cada espacio y cada día de la semana
     INSERT INTO horarios (espacio, bloque, diaSemana, ocupado)
     SELECT e.IdEspacio, NEW.IdBloque, d.dia, 0
@@ -602,73 +651,12 @@ SET SQL_MODE=@OLDTMP_SQL_MODE;
 -- Volcando estructura para disparador sisintupt.trg_liberar_horario_curso_delete
 SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 DELIMITER //
-CREATE TRIGGER trg_liberar_horario_curso_delete
-AFTER DELETE ON horario_curso
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_liberar_horario_curso_delete` AFTER DELETE ON `horario_curso` FOR EACH ROW BEGIN
     UPDATE horarios 
     SET ocupado = 0 
     WHERE espacio = OLD.Espacio 
       AND bloque = OLD.Bloque 
       AND diaSemana = OLD.DiaSemana;
-END//
-DELIMITER ;
-SET SQL_MODE=@OLDTMP_SQL_MODE;
-
--- Volcando estructura para disparador sisintupt.trg_prioridad_reservas
-SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION';
-DELIMITER //
-CREATE TRIGGER `trg_prioridad_reservas` BEFORE UPDATE ON `reserva` FOR EACH ROW BEGIN
-    DECLARE usuario_rol INT;
-    DECLARE reservas_afectadas INT;
-
-    -- Si la reserva se aprueba
-    IF NEW.estado = 'Aprobada' AND OLD.estado = 'Pendiente' THEN
-        
-        -- Registrar motivo automáticamente
-        SET NEW.Motivo = 'Reserva aceptada';
-
-        -- Obtener el rol del usuario que hizo la reserva
-        SELECT Rol INTO usuario_rol
-        FROM usuario
-        WHERE IdUsuario = NEW.usuario;
-
-        -- Caso: Docente (rol = 1)
-        IF usuario_rol = 1 THEN
-            UPDATE reserva 
-            SET estado = 'Rechazada',
-                Motivo = 'Reserva rechazada - Docente tiene prioridad'
-            WHERE espacio = NEW.espacio
-            AND fechaReserva = NEW.fechaReserva
-            AND bloque = NEW.bloque
-            AND estado = 'Pendiente'
-            AND IdReserva != OLD.IdReserva;
-
-        -- Caso: Estudiante (rol = 2)
-        ELSEIF usuario_rol = 2 THEN
-
-            SELECT COUNT(*) INTO reservas_afectadas
-            FROM reserva r
-            JOIN usuario u ON r.usuario = u.IdUsuario
-            WHERE r.espacio = NEW.espacio
-            AND r.fechaReserva = NEW.fechaReserva
-            AND r.bloque = NEW.bloque
-            AND r.estado = 'Pendiente'
-            AND u.Rol = 1;
-
-            IF reservas_afectadas = 0 THEN
-                UPDATE reserva 
-                SET estado = 'Rechazada',
-                    Motivo = 'Reserva rechazada - Otra reserva fue aprobada primero'
-                WHERE espacio = NEW.espacio
-                AND fechaReserva = NEW.fechaReserva
-                AND bloque = NEW.bloque
-                AND estado = 'Pendiente'
-                AND IdReserva != OLD.IdReserva;
-            END IF;
-        END IF;
-
-    END IF;
 END//
 DELIMITER ;
 SET SQL_MODE=@OLDTMP_SQL_MODE;
