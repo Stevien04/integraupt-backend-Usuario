@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Versión del servidor:         8.0.19 - MySQL Community Server - GPL
+-- Versión del servidor:         10.4.32-MariaDB - mariadb.org binary distribution
 -- SO del servidor:              Win64
--- HeidiSQL Versión:             12.10.0.7000
+-- HeidiSQL Versión:             12.11.0.7065
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -16,7 +16,7 @@
 
 
 -- Volcando estructura de base de datos para sisintupt
-CREATE DATABASE IF NOT EXISTS `sisintupt` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE IF NOT EXISTS `sisintupt` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
 USE `sisintupt`;
 
 -- Volcando estructura para evento sisintupt.aplicar_horarios_fijos
@@ -34,12 +34,12 @@ DELIMITER ;
 
 -- Volcando estructura para tabla sisintupt.auditoriareserva
 CREATE TABLE IF NOT EXISTS `auditoriareserva` (
-  `IdAudit` int NOT NULL AUTO_INCREMENT,
-  `IdReserva` int NOT NULL,
-  `EstadoAnterior` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `EstadoNuevo` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `FechaCambio` datetime DEFAULT CURRENT_TIMESTAMP,
-  `UsuarioCambio` int DEFAULT NULL,
+  `IdAudit` int(11) NOT NULL AUTO_INCREMENT,
+  `IdReserva` int(11) NOT NULL,
+  `EstadoAnterior` varchar(50) DEFAULT NULL,
+  `EstadoNuevo` varchar(50) DEFAULT NULL,
+  `FechaCambio` datetime DEFAULT current_timestamp(),
+  `UsuarioCambio` int(11) DEFAULT NULL,
   PRIMARY KEY (`IdAudit`),
   KEY `FK_auditoriareserva_reserva` (`IdReserva`),
   KEY `FK_auditoriareserva_usuario` (`UsuarioCambio`),
@@ -51,31 +51,34 @@ CREATE TABLE IF NOT EXISTS `auditoriareserva` (
 
 -- Volcando estructura para tabla sisintupt.bloqueshorarios
 CREATE TABLE IF NOT EXISTS `bloqueshorarios` (
-  `IdBloque` int NOT NULL AUTO_INCREMENT,
-  `Orden` int NOT NULL,
-  `Nombre` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `IdBloque` int(11) NOT NULL AUTO_INCREMENT,
+  `Orden` int(11) NOT NULL,
+  `Nombre` varchar(50) NOT NULL,
   `HoraInicio` time NOT NULL,
   `HoraFinal` time NOT NULL,
   PRIMARY KEY (`IdBloque`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.bloqueshorarios: ~3 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.bloqueshorarios: ~6 rows (aproximadamente)
 INSERT INTO `bloqueshorarios` (`IdBloque`, `Orden`, `Nombre`, `HoraInicio`, `HoraFinal`) VALUES
 	(10, 1, 'B1', '08:00:00', '08:50:00'),
 	(11, 2, 'B2', '08:50:00', '09:40:00'),
-	(13, 3, 'B3', '09:40:00', '10:30:00');
+	(13, 3, 'B3', '09:40:00', '10:30:00'),
+	(14, 4, 'B4', '10:30:00', '11:20:00'),
+	(15, 5, 'B5', '11:20:00', '12:10:00'),
+	(16, 6, 'B6', '12:10:00', '12:50:00');
 
 -- Volcando estructura para tabla sisintupt.escuela
 CREATE TABLE IF NOT EXISTS `escuela` (
-  `IdEscuela` int NOT NULL AUTO_INCREMENT,
-  `IdFacultad` int NOT NULL,
-  `Nombre` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `IdEscuela` int(11) NOT NULL AUTO_INCREMENT,
+  `IdFacultad` int(11) NOT NULL,
+  `Nombre` varchar(50) NOT NULL,
   PRIMARY KEY (`IdEscuela`),
   KEY `FK__facultad` (`IdFacultad`),
   CONSTRAINT `FK__facultad` FOREIGN KEY (`IdFacultad`) REFERENCES `facultad` (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.escuela: ~9 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.escuela: ~19 rows (aproximadamente)
 INSERT INTO `escuela` (`IdEscuela`, `IdFacultad`, `Nombre`) VALUES
 	(1, 1, 'Ing. Civil'),
 	(2, 1, 'Ing. de Sistemas'),
@@ -99,16 +102,16 @@ INSERT INTO `escuela` (`IdEscuela`, `IdFacultad`, `Nombre`) VALUES
 
 -- Volcando estructura para tabla sisintupt.espacio
 CREATE TABLE IF NOT EXISTS `espacio` (
-  `IdEspacio` int NOT NULL AUTO_INCREMENT,
-  `Codigo` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
-  `Nombre` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `Ubicacion` text COLLATE utf8mb4_general_ci,
-  `Tipo` enum('Laboratorio','Salon') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Laboratorio',
-  `Capacidad` int NOT NULL,
-  `Equipamiento` text COLLATE utf8mb4_general_ci,
-  `Facultad` int NOT NULL,
-  `Escuela` int NOT NULL,
-  `Estado` int NOT NULL DEFAULT '1',
+  `IdEspacio` int(11) NOT NULL AUTO_INCREMENT,
+  `Codigo` varchar(20) NOT NULL DEFAULT '',
+  `Nombre` varchar(100) NOT NULL,
+  `Ubicacion` text DEFAULT NULL,
+  `Tipo` enum('Laboratorio','Salon') NOT NULL DEFAULT 'Laboratorio',
+  `Capacidad` int(11) NOT NULL,
+  `Equipamiento` text DEFAULT NULL,
+  `Facultad` int(11) NOT NULL,
+  `Escuela` int(11) NOT NULL,
+  `Estado` int(11) NOT NULL DEFAULT 1,
   PRIMARY KEY (`IdEspacio`),
   UNIQUE KEY `Codigo` (`Codigo`),
   KEY `FK_espacio_facultad` (`Facultad`),
@@ -130,8 +133,8 @@ INSERT INTO `espacio` (`IdEspacio`, `Codigo`, `Nombre`, `Ubicacion`, `Tipo`, `Ca
 
 -- Volcando estructura para tabla sisintupt.facultad
 CREATE TABLE IF NOT EXISTS `facultad` (
-  `IdFacultad` int NOT NULL AUTO_INCREMENT,
-  `Nombre` varchar(10) COLLATE utf8mb4_general_ci NOT NULL,
+  `IdFacultad` int(11) NOT NULL AUTO_INCREMENT,
+  `Nombre` varchar(10) NOT NULL,
   PRIMARY KEY (`IdFacultad`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -146,19 +149,19 @@ INSERT INTO `facultad` (`IdFacultad`, `Nombre`) VALUES
 
 -- Volcando estructura para tabla sisintupt.horarios
 CREATE TABLE IF NOT EXISTS `horarios` (
-  `IdHorario` int NOT NULL AUTO_INCREMENT,
-  `espacio` int NOT NULL,
-  `bloque` int NOT NULL,
-  `diaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') COLLATE utf8mb4_general_ci NOT NULL,
-  `ocupado` tinyint(1) NOT NULL DEFAULT '0',
+  `IdHorario` int(11) NOT NULL AUTO_INCREMENT,
+  `espacio` int(11) NOT NULL,
+  `bloque` int(11) NOT NULL,
+  `diaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') NOT NULL,
+  `ocupado` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`IdHorario`) USING BTREE,
   KEY `FK_horario_espacio` (`espacio`) USING BTREE,
   KEY `FK_horario_bloque` (`bloque`) USING BTREE,
   CONSTRAINT `FK_horario_bloque` FOREIGN KEY (`bloque`) REFERENCES `bloqueshorarios` (`IdBloque`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_horario_espacio` FOREIGN KEY (`espacio`) REFERENCES `espacio` (`IdEspacio`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=465 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=843 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.horarios: ~144 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.horarios: ~240 rows (aproximadamente)
 INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`) VALUES
 	(258, 1, 10, 'Lunes', 1),
 	(259, 1, 10, 'Martes', 0),
@@ -303,19 +306,163 @@ INSERT INTO `horarios` (`IdHorario`, `espacio`, `bloque`, `diaSemana`, `ocupado`
 	(461, 6, 13, 'Miercoles', 0),
 	(462, 6, 13, 'Jueves', 0),
 	(463, 6, 13, 'Viernes', 0),
-	(464, 6, 13, 'Sabado', 0);
+	(464, 6, 13, 'Sabado', 0),
+	(654, 1, 14, 'Lunes', 0),
+	(655, 1, 14, 'Martes', 0),
+	(656, 1, 14, 'Miercoles', 0),
+	(657, 1, 14, 'Jueves', 0),
+	(658, 1, 14, 'Viernes', 0),
+	(659, 1, 14, 'Sabado', 0),
+	(660, 2, 14, 'Lunes', 0),
+	(661, 2, 14, 'Martes', 0),
+	(662, 2, 14, 'Miercoles', 0),
+	(663, 2, 14, 'Jueves', 0),
+	(664, 2, 14, 'Viernes', 0),
+	(665, 2, 14, 'Sabado', 0),
+	(666, 3, 14, 'Lunes', 0),
+	(667, 3, 14, 'Martes', 0),
+	(668, 3, 14, 'Miercoles', 0),
+	(669, 3, 14, 'Jueves', 0),
+	(670, 3, 14, 'Viernes', 0),
+	(671, 3, 14, 'Sabado', 0),
+	(672, 4, 14, 'Lunes', 0),
+	(673, 4, 14, 'Martes', 0),
+	(674, 4, 14, 'Miercoles', 0),
+	(675, 4, 14, 'Jueves', 0),
+	(676, 4, 14, 'Viernes', 0),
+	(677, 4, 14, 'Sabado', 0),
+	(678, 5, 14, 'Lunes', 0),
+	(679, 5, 14, 'Martes', 0),
+	(680, 5, 14, 'Miercoles', 0),
+	(681, 5, 14, 'Jueves', 0),
+	(682, 5, 14, 'Viernes', 0),
+	(683, 5, 14, 'Sabado', 0),
+	(684, 6, 14, 'Lunes', 0),
+	(685, 6, 14, 'Martes', 0),
+	(686, 6, 14, 'Miercoles', 0),
+	(687, 6, 14, 'Jueves', 0),
+	(688, 6, 14, 'Viernes', 0),
+	(689, 6, 14, 'Sabado', 0),
+	(690, 7, 14, 'Lunes', 0),
+	(691, 7, 14, 'Martes', 0),
+	(692, 7, 14, 'Miercoles', 0),
+	(693, 7, 14, 'Jueves', 0),
+	(694, 7, 14, 'Viernes', 0),
+	(695, 7, 14, 'Sabado', 0),
+	(696, 8, 14, 'Lunes', 0),
+	(697, 8, 14, 'Martes', 0),
+	(698, 8, 14, 'Miercoles', 0),
+	(699, 8, 14, 'Jueves', 0),
+	(700, 8, 14, 'Viernes', 0),
+	(701, 8, 14, 'Sabado', 0),
+	(717, 1, 15, 'Lunes', 0),
+	(718, 1, 15, 'Martes', 0),
+	(719, 1, 15, 'Miercoles', 0),
+	(720, 1, 15, 'Jueves', 0),
+	(721, 1, 15, 'Viernes', 0),
+	(722, 1, 15, 'Sabado', 0),
+	(723, 2, 15, 'Lunes', 0),
+	(724, 2, 15, 'Martes', 0),
+	(725, 2, 15, 'Miercoles', 0),
+	(726, 2, 15, 'Jueves', 0),
+	(727, 2, 15, 'Viernes', 0),
+	(728, 2, 15, 'Sabado', 0),
+	(729, 3, 15, 'Lunes', 0),
+	(730, 3, 15, 'Martes', 0),
+	(731, 3, 15, 'Miercoles', 0),
+	(732, 3, 15, 'Jueves', 0),
+	(733, 3, 15, 'Viernes', 0),
+	(734, 3, 15, 'Sabado', 0),
+	(735, 4, 15, 'Lunes', 0),
+	(736, 4, 15, 'Martes', 0),
+	(737, 4, 15, 'Miercoles', 0),
+	(738, 4, 15, 'Jueves', 0),
+	(739, 4, 15, 'Viernes', 0),
+	(740, 4, 15, 'Sabado', 0),
+	(741, 5, 15, 'Lunes', 0),
+	(742, 5, 15, 'Martes', 0),
+	(743, 5, 15, 'Miercoles', 0),
+	(744, 5, 15, 'Jueves', 0),
+	(745, 5, 15, 'Viernes', 0),
+	(746, 5, 15, 'Sabado', 0),
+	(747, 6, 15, 'Lunes', 0),
+	(748, 6, 15, 'Martes', 0),
+	(749, 6, 15, 'Miercoles', 0),
+	(750, 6, 15, 'Jueves', 0),
+	(751, 6, 15, 'Viernes', 0),
+	(752, 6, 15, 'Sabado', 0),
+	(753, 7, 15, 'Lunes', 0),
+	(754, 7, 15, 'Martes', 0),
+	(755, 7, 15, 'Miercoles', 0),
+	(756, 7, 15, 'Jueves', 0),
+	(757, 7, 15, 'Viernes', 0),
+	(758, 7, 15, 'Sabado', 0),
+	(759, 8, 15, 'Lunes', 0),
+	(760, 8, 15, 'Martes', 0),
+	(761, 8, 15, 'Miercoles', 0),
+	(762, 8, 15, 'Jueves', 0),
+	(763, 8, 15, 'Viernes', 0),
+	(764, 8, 15, 'Sabado', 0),
+	(780, 1, 16, 'Lunes', 0),
+	(781, 1, 16, 'Martes', 0),
+	(782, 1, 16, 'Miercoles', 0),
+	(783, 1, 16, 'Jueves', 0),
+	(784, 1, 16, 'Viernes', 0),
+	(785, 1, 16, 'Sabado', 0),
+	(786, 2, 16, 'Lunes', 0),
+	(787, 2, 16, 'Martes', 0),
+	(788, 2, 16, 'Miercoles', 0),
+	(789, 2, 16, 'Jueves', 0),
+	(790, 2, 16, 'Viernes', 0),
+	(791, 2, 16, 'Sabado', 0),
+	(792, 3, 16, 'Lunes', 0),
+	(793, 3, 16, 'Martes', 0),
+	(794, 3, 16, 'Miercoles', 0),
+	(795, 3, 16, 'Jueves', 0),
+	(796, 3, 16, 'Viernes', 0),
+	(797, 3, 16, 'Sabado', 0),
+	(798, 4, 16, 'Lunes', 0),
+	(799, 4, 16, 'Martes', 0),
+	(800, 4, 16, 'Miercoles', 0),
+	(801, 4, 16, 'Jueves', 0),
+	(802, 4, 16, 'Viernes', 0),
+	(803, 4, 16, 'Sabado', 0),
+	(804, 5, 16, 'Lunes', 0),
+	(805, 5, 16, 'Martes', 0),
+	(806, 5, 16, 'Miercoles', 0),
+	(807, 5, 16, 'Jueves', 0),
+	(808, 5, 16, 'Viernes', 0),
+	(809, 5, 16, 'Sabado', 0),
+	(810, 6, 16, 'Lunes', 0),
+	(811, 6, 16, 'Martes', 0),
+	(812, 6, 16, 'Miercoles', 0),
+	(813, 6, 16, 'Jueves', 0),
+	(814, 6, 16, 'Viernes', 0),
+	(815, 6, 16, 'Sabado', 0),
+	(816, 7, 16, 'Lunes', 0),
+	(817, 7, 16, 'Martes', 0),
+	(818, 7, 16, 'Miercoles', 0),
+	(819, 7, 16, 'Jueves', 0),
+	(820, 7, 16, 'Viernes', 0),
+	(821, 7, 16, 'Sabado', 0),
+	(822, 8, 16, 'Lunes', 0),
+	(823, 8, 16, 'Martes', 0),
+	(824, 8, 16, 'Miercoles', 0),
+	(825, 8, 16, 'Jueves', 0),
+	(826, 8, 16, 'Viernes', 0),
+	(827, 8, 16, 'Sabado', 0);
 
 -- Volcando estructura para tabla sisintupt.horario_curso
 CREATE TABLE IF NOT EXISTS `horario_curso` (
-  `IdHorarioCurso` int NOT NULL AUTO_INCREMENT,
-  `Curso` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `Docente` int NOT NULL,
-  `Espacio` int NOT NULL,
-  `Bloque` int NOT NULL,
-  `DiaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') COLLATE utf8mb4_general_ci NOT NULL,
+  `IdHorarioCurso` int(11) NOT NULL AUTO_INCREMENT,
+  `Curso` varchar(100) NOT NULL,
+  `Docente` int(11) NOT NULL,
+  `Espacio` int(11) NOT NULL,
+  `Bloque` int(11) NOT NULL,
+  `DiaSemana` enum('Lunes','Martes','Miercoles','Jueves','Viernes','Sabado') NOT NULL,
   `FechaInicio` date NOT NULL,
   `FechaFin` date NOT NULL,
-  `Estado` tinyint(1) NOT NULL DEFAULT '1',
+  `Estado` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`IdHorarioCurso`),
   KEY `FK_horario_curso_usuario` (`Docente`),
   KEY `FK_horario_curso_espacio` (`Espacio`),
@@ -338,15 +485,15 @@ DELIMITER ;
 
 -- Volcando estructura para tabla sisintupt.reserva
 CREATE TABLE IF NOT EXISTS `reserva` (
-  `IdReserva` int NOT NULL AUTO_INCREMENT,
-  `usuario` int NOT NULL,
-  `espacio` int NOT NULL,
+  `IdReserva` int(11) NOT NULL AUTO_INCREMENT,
+  `usuario` int(11) NOT NULL,
+  `espacio` int(11) NOT NULL,
   `fechaReserva` date NOT NULL,
-  `bloque` int NOT NULL,
-  `estado` varchar(50) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pendiente',
-  `fechaSolicitud` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `Descripcion` tinytext COLLATE utf8mb4_general_ci NOT NULL,
-  `Motivo` tinytext COLLATE utf8mb4_general_ci,
+  `bloque` int(11) NOT NULL,
+  `estado` varchar(50) NOT NULL DEFAULT 'Pendiente',
+  `fechaSolicitud` datetime NOT NULL DEFAULT current_timestamp(),
+  `Descripcion` tinytext NOT NULL,
+  `Motivo` tinytext DEFAULT NULL,
   PRIMARY KEY (`IdReserva`),
   KEY `FK_reserva_espacio` (`espacio`),
   KEY `FK_reserva_usuario` (`usuario`),
@@ -370,36 +517,36 @@ DELIMITER ;
 
 -- Volcando estructura para tabla sisintupt.rol
 CREATE TABLE IF NOT EXISTS `rol` (
-  `IdRol` int NOT NULL,
-  `Nombre` varchar(15) COLLATE utf8mb4_general_ci NOT NULL,
+  `IdRol` int(11) NOT NULL,
+  `Nombre` varchar(15) NOT NULL,
   PRIMARY KEY (`IdRol`),
   UNIQUE KEY `Nombre` (`Nombre`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.rol: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.rol: ~4 rows (aproximadamente)
 INSERT INTO `rol` (`IdRol`, `Nombre`) VALUES
-	(3, 'Administrador'),
-	(2, 'Estudiante'),
 	(1, 'Profesor'),
+	(2, 'Estudiante'),
+	(3, 'Administrador'),
 	(4, 'Supervisor');
 
 -- Volcando estructura para tabla sisintupt.usuario
 CREATE TABLE IF NOT EXISTS `usuario` (
-  `IdUsuario` int NOT NULL AUTO_INCREMENT,
-  `Nombre` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `Apellido` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `CodigoU` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
-  `CorreoU` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `TipoDoc` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `NumDoc` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
-  `Rol` int NOT NULL,
-  `Facultad` int NOT NULL,
-  `Escuela` int NOT NULL,
-  `Celular` varchar(11) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `IdUsuario` int(11) NOT NULL AUTO_INCREMENT,
+  `Nombre` varchar(30) NOT NULL,
+  `Apellido` varchar(30) NOT NULL,
+  `CodigoU` varchar(20) NOT NULL DEFAULT '',
+  `CorreoU` varchar(30) NOT NULL,
+  `TipoDoc` varchar(30) NOT NULL,
+  `NumDoc` varchar(20) NOT NULL DEFAULT '',
+  `Rol` int(11) NOT NULL,
+  `Facultad` int(11) NOT NULL,
+  `Escuela` int(11) NOT NULL,
+  `Celular` varchar(11) DEFAULT NULL,
   `Genero` bit(1) DEFAULT NULL,
-  `Password` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
-  `Estado` int NOT NULL,
-  `Sesion` tinyint(1) NOT NULL DEFAULT '0',
+  `Password` varchar(255) NOT NULL DEFAULT '',
+  `Estado` int(11) NOT NULL,
+  `Sesion` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`IdUsuario`),
   UNIQUE KEY `CodigoU` (`CodigoU`),
   UNIQUE KEY `NumDoc` (`NumDoc`),
@@ -414,7 +561,7 @@ CREATE TABLE IF NOT EXISTS `usuario` (
 
 -- Volcando datos para la tabla sisintupt.usuario: ~4 rows (aproximadamente)
 INSERT INTO `usuario` (`IdUsuario`, `Nombre`, `Apellido`, `CodigoU`, `CorreoU`, `TipoDoc`, `NumDoc`, `Rol`, `Facultad`, `Escuela`, `Celular`, `Genero`, `Password`, `Estado`, `Sesion`) VALUES
-	(5, 'STEVIE', 'MARCA', '2023076802', '1@upt.pe', 'DNI', '72405382', 1, 1, 1, '979793902', b'1', 'APRt0kF8p6Kv+q8Zw7EcG/4Ob7WXZE3pNsNzByTy6mg=', 1, 0),
+	(5, 'STEVIE', 'MARCA', '2023076802', '1@upt.pe', 'DNI', '72405382', 2, 1, 1, '979793902', b'1', '123', 1, 0),
 	(7, 'DAYAN', 'JAHUIRA', '2022075749', 'Dayan@hotmail.com', 'DNI', '12345678', 3, 1, 1, '123456789', b'1', '123', 0, 0),
 	(10, 'STEVIE', 'AGUILAR', '2023076808', 'stevie@upt.edu', 'DNI', '12345679', 3, 1, 1, '987654321', b'1', 'APRt0kF8p6Kv+q8Zw7EcG/4Ob7WXZE3pNsNzByTy6mg=', 0, 0),
 	(11, 'CRISTIAN', 'MAMANI', '2023076801', 'A@upt.pe', 'DNI', '72405638', 3, 1, 1, '979739029', b'1', 'enyx1M2OSSqIcCCNf5Cp3nmup3XCZCqT6mB5ji6kGII=', 1, 0);
