@@ -46,6 +46,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [selectedReservacion, setSelectedReservacion] = useState<Reservacion | null>(null);
   const [showReservaModal, setShowReservaModal] = useState(false);
   const [espacioToReserve, setEspacioToReserve] = useState<Espacio | null>(null);
+  const [reservaModalError, setReservaModalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,9 +56,9 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [horariosEspacios, setHorariosEspacios] = useState<Record<string, HorarioCompleto[]>>({});
   const [horariosCargando, setHorariosCargando] = useState(false);
 
- const [bloquesCatalogo, setBloquesCatalogo] = useState<BloqueHorarioCatalogoMap>(horariosService.getBloquesHorarios());
-   const [bloquesCargando, setBloquesCargando] = useState(true);
-   const [bloquesError, setBloquesError] = useState<string | null>(null);
+  const [bloquesCatalogo, setBloquesCatalogo] = useState<BloqueHorarioCatalogoMap>(horariosService.getBloquesHorarios());
+  const [bloquesCargando, setBloquesCargando] = useState(true);
+  const [bloquesError, setBloquesError] = useState<string | null>(null);
 
    useEffect(() => {
      let activo = true;
@@ -122,12 +123,36 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
       return ordenCatalogo !== undefined ? ordenCatalogo + 1 : bloqueId;
     };
 
+const bloquesOrdenados = useMemo(() => {
+    return Object.entries(bloquesCatalogo)
+      .map(([id, bloque]) => {
+        const horaInicio = formatearHora(bloque?.horaInicio);
+        const horaFinal = formatearHora(bloque?.horaFinal);
+        const orden = bloque?.orden ?? ordenBloques.get(Number(id)) ?? Number(id);
+
+        return {
+          id: Number(id),
+          label: `${bloque?.nombre ?? `Bloque ${id}`} (${horaInicio} - ${horaFinal})`,
+          horaInicio,
+          horaFinal,
+          orden: typeof orden === 'number' ? orden : Number(id)
+        };
+      })
+      .sort((a, b) => {
+        if (a.orden !== b.orden) {
+          return a.orden - b.orden;
+        }
+        return a.id - b.id;
+      });
+  }, [bloquesCatalogo, ordenBloques]);
+
 
   // Estado para formulario de reserva de espacios
   const [espaciosForm, setEspaciosForm] = useState({
     type: 'laboratorio' as 'laboratorio' | 'aula',
     resource: '',
     date: '',
+    bloqueId: '',
     startTime: '',
     endTime: '',
     ciclo: '',
@@ -259,10 +284,12 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
 
   const handleReservarEspacio = (espacio: Espacio) => {
     setEspacioToReserve(espacio);
+    setReservaModalError(null);
     setReservaRapidaForm({
       ciclo: '',
       curso: '',
       date: '',
+      bloqueId: '',
       startTime: '',
       endTime: '',
       motivo: ''
@@ -275,18 +302,47 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
 
     try {
       setLoading(true);
+      setReservaModalError(null);
+
+            if (!reservaRapidaForm.bloqueId) {
+              setReservaModalError('Selecciona un bloque horario disponible antes de enviar tu solicitud.');
+              return;
+            }
+
+            const bloqueId = parseInt(reservaRapidaForm.bloqueId, 10);
+
+            if (Number.isNaN(bloqueId)) {
+              setReservaModalError('El bloque horario seleccionado no es válido.');
+              return;
+            }
+
+            const bloqueSeleccionado = bloquesCatalogo[bloqueId];
+
+            if (!bloqueSeleccionado) {
+              setReservaModalError('No se pudo identificar el bloque horario seleccionado. Intenta nuevamente.');
+              return;
+            }
+
+            if (!reservaRapidaForm.date) {
+              setReservaModalError('Selecciona la fecha de tu reserva.');
+              return;
+            }
 
       // Crear la descripción con ciclo y curso
-      const descripcion = `Ciclo: ${reservaRapidaForm.ciclo} - Curso: ${reservaRapidaForm.curso} - ${reservaRapidaForm.motivo || 'Sin descripción adicional'}`;
+     const horaInicio = formatearHora(bloqueSeleccionado.horaInicio);
+           const horaFin = formatearHora(bloqueSeleccionado.horaFinal);
+           const descripcion = `Ciclo: ${reservaRapidaForm.ciclo} - Curso: ${reservaRapidaForm.curso} - Horario: ${horaInicio} a ${horaFin} - ${reservaRapidaForm.motivo || 'Sin descripción adicional'}`;
+
+           const motivo = reservaRapidaForm.motivo?.trim();
 
       // Preparar datos para la API
       const reservaData = {
         usuario: parseInt(user.id),
         espacio: parseInt(espacioToReserve.id),
         fechaReserva: reservaRapidaForm.date,
-        bloque: 10, // Necesitarías mapear el horario a un bloque ID
+        bloque: bloqueId,
         descripcion: descripcion,
-        motivo: reservaRapidaForm.motivo
+        motivo: motivo ? motivo : undefined
       };
 
       // Enviar a la API
@@ -297,6 +353,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
 
       setShowReservaModal(false);
       setEspacioToReserve(null);
+       setReservaModalError(null);
 
       // Mostrar mensaje de éxito
       alert('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
@@ -304,6 +361,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
     } catch (err) {
       setError('Error al crear la reserva');
       console.error('Error creando reserva:', err);
+       setReservaModalError('No se pudo crear la reserva. Intenta nuevamente en unos momentos.');
     } finally {
       setLoading(false);
     }
@@ -1080,7 +1138,10 @@ const mapaBloques = new Map<number, BloqueHorario>();
                   <p className="servicios-modal-subtitle">{espacioToReserve.tipo} - {espacioToReserve.facultad}</p>
                 </div>
                 <button
-                  onClick={() => setShowReservaModal(false)}
+                  onClick={() => {
+                                      setShowReservaModal(false);
+                                      setReservaModalError(null);
+                                    }}
                   className="servicios-modal-close"
                   disabled={loading}
                 >
@@ -1094,6 +1155,13 @@ const mapaBloques = new Map<number, BloqueHorario>();
                     <strong>Información del espacio:</strong> {espacioToReserve.ubicacion} | Capacidad: {espacioToReserve.capacidad}
                   </p>
                 </div>
+                   {reservaModalError && (
+                                  <div className="servicios-modal-error">{reservaModalError}</div>
+                                )}
+
+                                {bloquesError && (
+                                  <div className="servicios-modal-error">{bloquesError}</div>
+                                )}
 
                 <div className="servicios-form-grid">
                   <div className="servicios-form-group">
@@ -1139,27 +1207,68 @@ const mapaBloques = new Map<number, BloqueHorario>();
                   />
                 </div>
 
+                  <div className="servicios-form-group">
+                                  <label className="servicios-form-label">Bloque horario *</label>
+                                  <select
+                                    value={reservaRapidaForm.bloqueId}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      if (!value) {
+                                        setReservaRapidaForm(prev => ({ ...prev, bloqueId: '', startTime: '', endTime: '' }));
+                                        setReservaModalError(null);
+                                        return;
+                                      }
+
+                                      const bloqueSeleccionado = bloquesOrdenados.find(b => b.id === Number(value));
+
+                                      setReservaRapidaForm(prev => ({
+                                        ...prev,
+                                        bloqueId: value,
+                                        startTime: bloqueSeleccionado ? bloqueSeleccionado.horaInicio : '',
+                                        endTime: bloqueSeleccionado ? bloqueSeleccionado.horaFinal : ''
+                                      }));
+                                      setReservaModalError(null);
+                                    }}
+                                    className="servicios-form-select"
+                                    required
+                                    disabled={loading || bloquesCargando || !!bloquesError || bloquesOrdenados.length === 0}
+                                  >
+                                    <option value="">
+                                      {bloquesCargando ? 'Cargando bloques horarios...' : 'Selecciona un bloque disponible'}
+                                    </option>
+                                    {!bloquesCargando && bloquesOrdenados.map(bloque => (
+                                      <option key={bloque.id} value={bloque.id}>
+                                        {bloque.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {!bloquesCargando && !bloquesError && bloquesOrdenados.length === 0 && (
+                                    <p className="servicios-form-help">No se encontraron bloques horarios configurados para reservar.</p>
+                                  )}
+                                </div>
+
+
                 <div className="servicios-form-grid">
                   <div className="servicios-form-group">
                     <label className="servicios-form-label">Hora Inicio *</label>
                     <input
-                      type="time"
+                      type="text"
                       value={reservaRapidaForm.startTime}
-                      onChange={(e) => setReservaRapidaForm({ ...reservaRapidaForm, startTime: e.target.value })}
+                      placeholder="Selecciona un bloque horario"
                       className="servicios-form-input"
-                      required
-                      disabled={loading}
+                      readOnly
+                      disabled
                     />
                   </div>
                   <div className="servicios-form-group">
                     <label className="servicios-form-label">Hora Fin *</label>
                     <input
-                      type="time"
+                      type="text"
                       value={reservaRapidaForm.endTime}
-                      onChange={(e) => setReservaRapidaForm({ ...reservaRapidaForm, endTime: e.target.value })}
+                     placeholder="Selecciona un bloque horario"
                       className="servicios-form-input"
-                      required
-                      disabled={loading}
+                      readOnly
+                      disabled
                     />
                   </div>
                 </div>
