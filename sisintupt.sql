@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS `horario_curso` (
   CONSTRAINT `FK_horario_curso_usuario` FOREIGN KEY (`Docente`) REFERENCES `usuario` (`IdUsuario`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Volcando datos para la tabla sisintupt.horario_curso: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla sisintupt.horario_curso: ~0 rows (aproximadamente)
 INSERT INTO `horario_curso` (`IdHorarioCurso`, `Curso`, `Docente`, `Espacio`, `Bloque`, `DiaSemana`, `FechaInicio`, `FechaFin`, `Estado`) VALUES
 	(2, 'asdf', 7, 1, 10, 'Lunes', '2025-09-11', '2025-10-30', 1);
 
@@ -439,7 +439,7 @@ CREATE TABLE IF NOT EXISTS `usuario` (
 INSERT INTO `usuario` (`IdUsuario`, `Nombre`, `Apellido`, `CodigoU`, `CorreoU`, `TipoDoc`, `NumDoc`, `Rol`, `Facultad`, `Escuela`, `Celular`, `Genero`, `Password`, `Estado`, `Sesion`) VALUES
 	(5, 'STEVIE', 'MARCA', '2023076802', '1@upt.pe', 'DNI', '72405382', 2, 1, 1, '979793902', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
 	(7, 'DAYAN', 'JAHUIRA', '2023076800', 'Dayan@hotmail.com', 'DNI', '12345678', 3, 1, 1, '123456789', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
-	(10, 'STEVIE', 'AGUILAR', '2023076808', 'stevie@upt.edu', 'DNI', '12345679', 3, 1, 1, '987654321', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
+	(10, 'STEVIE', 'AGUILAR', '2023076808', 'stevie@upt.edu', 'DNI', '12345679', 3, 1, 1, '987654321', b'1', 'hbL3qY5WhK5fV9wPfqHFOQ==', 1, 0),
 	(11, 'CRISTIAN', 'MAMANI', '2023076801', 'A@upt.pe', 'DNI', '72405638', 3, 1, 1, '979739029', b'1', 'JXMNMFknrvtAvRaO12EHRA==', 1, 0),
 	(13, 'Admin Temporal', 'Prueba', '2023073801', 'admin.temp@upt.edu', 'DNI', '00000000', 3, 1, 1, NULL, NULL, 'JXMNMFknrvtAvRaO12EHRA==', 1, 0);
 

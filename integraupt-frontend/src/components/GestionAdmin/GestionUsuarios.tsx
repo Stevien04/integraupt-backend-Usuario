@@ -1,6 +1,6 @@
 // components/GestionUsuarios.tsx
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, X, Check, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, Check, Filter, Eye, EyeOff } from 'lucide-react';
 
 interface Usuario {
   id: string;
@@ -17,6 +17,7 @@ interface Usuario {
   genero: string;
   estado: number;
   fechaCreacion?: string;
+  password?: string;
 }
 
 interface GestionUsuariosProps {
@@ -31,6 +32,7 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRol, setFilterRol] = useState('all');
   const [filterEstado, setFilterEstado] = useState('all');
+  const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     codigo: '',
@@ -70,7 +72,8 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
         rol: (usuario.rol || 'ESTUDIANTE').toUpperCase(),
         genero: (usuario.genero || 'OTRO').toUpperCase(),
         estado: typeof usuario.estado === 'number' ? usuario.estado : 0,
-        fechaCreacion: usuario.fechaCreacion || ''
+        fechaCreacion: usuario.fechaCreacion || '',
+              password: usuario.password || ''
       })) : [];
       
       setUsuarios(usuariosMapeados);
@@ -167,9 +170,10 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
       escuela: usuario.escuela,
       rol: usuario.rol,
       genero: usuario.genero,
-      password: '', // No mostrar password actual por seguridad
+       password: usuario.password || '',
       estado: usuario.estado
     });
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -189,6 +193,7 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
       password: '',
       estado: 1
     });
+    setShowPassword(false);
     setEditingUsuario(null);
     setShowModal(false);
   };
@@ -274,8 +279,11 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
           <h2 className="admin-content-title">Gestión de Usuarios</h2>
           <p className="admin-content-subtitle">Administra estudiantes, docentes y personal</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
+        <button
+                 onClick={() => {
+                   setShowPassword(false);
+                   setShowModal(true);
+                 }}
           className="admin-primary-btn admin-primary-purple"
         >
           <Plus className="admin-btn-icon" />
@@ -614,26 +622,45 @@ export const GestionUsuarios: React.FC<GestionUsuariosProps> = ({ onAuditLog }) 
               </div>
 
               {/* Credenciales */}
-              {!editingUsuario && (
-                <div className="admin-form-section">
-                  <h4 className="admin-form-section-title">Credenciales de Acceso</h4>
-                  <div className="admin-form-stack">
-                    <div className="admin-form-group">
-                      <label className="admin-form-label">Contraseña *</label>
+               <div className="admin-form-section">
+                              <h4 className="admin-form-section-title">Credenciales de Acceso</h4>
+                              <div className="admin-form-stack">
+                                <div className="admin-form-group">
+                                  <label className="admin-form-label">
+                                    Contraseña{editingUsuario ? '' : ' *'}
+                                  </label>
+                                  <div className="admin-password-wrapper">
                       <input
-                        type="password"
+                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Contraseña inicial"
-                        className="admin-form-input"
+                        placeholder={editingUsuario ? 'Contraseña del usuario' : 'Contraseña inicial'}
+                                               className="admin-form-input admin-password-input"
                         required={!editingUsuario}
                         minLength={6}
                       />
-                      <p className="admin-form-help">La contraseña debe tener al menos 6 caracteres</p>
+                      <button
+                                              type="button"
+                                              className="admin-password-toggle"
+                                              onClick={() => setShowPassword((prev) => !prev)}
+                                              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                              aria-pressed={showPassword}
+                                            >
+                                              {showPassword ? (
+                                                <EyeOff className="admin-password-icon" />
+                                              ) : (
+                                                <Eye className="admin-password-icon" />
+                                              )}
+                                            </button>
                     </div>
+                     <p className="admin-form-help">
+                                          {editingUsuario
+                                            ? 'Puedes visualizar o actualizar la contraseña del usuario. Debe tener al menos 6 caracteres.'
+                                            : 'La contraseña debe tener al menos 6 caracteres. Puedes usar el ícono del ojo para visualizarla temporalmente.'}
+                                        </p>
                   </div>
                 </div>
-              )}
+               </div>
 
               <div className="admin-modal-actions">
                 <button
