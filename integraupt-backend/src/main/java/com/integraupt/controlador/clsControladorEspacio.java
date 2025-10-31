@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
-
 
 /**
  * Controlador REST para la gestión de espacios (aulas y laboratorios)
@@ -40,9 +40,10 @@ public class clsControladorEspacio {
      * Obtener todos los espacios
      */
     @GetMapping
-    public ResponseEntity<List<clsDTOEspacioResponse.EspacioDTO>> obtenerTodosLosEspacios() {
+    public ResponseEntity<List<clsDTOEspacioResponse.EspacioDTO>> obtenerTodosLosEspacios(
+            @RequestParam(value = "escuelaId", required = false) Integer escuelaId) {
         try {
-            List<clsDTOEspacioResponse.EspacioDTO> espacios = servicioEspacio.obtenerTodosLosEspacios();
+            List<clsDTOEspacioResponse.EspacioDTO> espacios = servicioEspacio.obtenerTodosLosEspacios(escuelaId);
             return ResponseEntity.ok(espacios);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -129,9 +130,10 @@ public class clsControladorEspacio {
      * Obtener espacios disponibles
      */
     @GetMapping("/disponibles")
-    public ResponseEntity<List<clsDTOEspacioResponse.EspacioDTO>> obtenerEspaciosDisponibles() {
+    public ResponseEntity<List<clsDTOEspacioResponse.EspacioDTO>> obtenerEspaciosDisponibles(
+            @RequestParam(value = "escuelaId", required = false) Integer escuelaId) {
         try {
-            List<clsDTOEspacioResponse.EspacioDTO> espacios = servicioEspacio.obtenerEspaciosDisponibles();
+            List<clsDTOEspacioResponse.EspacioDTO> espacios = servicioEspacio.obtenerEspaciosDisponibles(escuelaId);
             return ResponseEntity.ok(espacios);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

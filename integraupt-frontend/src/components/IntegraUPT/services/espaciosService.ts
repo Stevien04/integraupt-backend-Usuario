@@ -2,6 +2,13 @@ import type { Espacio } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
 
+const normalizeString = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+
 export interface EspacioFormData {
   codigo: string;
   nombre: string;
@@ -48,9 +55,14 @@ const ESCUELAS_MAP: { [key: number]: string } = {
 };
 
 class EspaciosService {
-  async getAllEspacios(): Promise<Espacio[]> {
+  async getAllEspacios(params?: { escuelaId?: number | null }): Promise<Espacio[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/espacios`, {
+      const url = new URL(`${API_BASE_URL}/api/espacios`);
+            if (params?.escuelaId != null) {
+              url.searchParams.set('escuelaId', String(params.escuelaId));
+            }
+
+            const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -159,9 +171,14 @@ class EspaciosService {
     }
   }
 
-  async getEspaciosDisponibles(): Promise<Espacio[]> {
+  async getEspaciosDisponibles(params?: { escuelaId?: number | null }): Promise<Espacio[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/espacios/disponibles`, {
+      const url = new URL(`${API_BASE_URL}/api/espacios/disponibles`);
+            if (params?.escuelaId != null) {
+              url.searchParams.set('escuelaId', String(params.escuelaId));
+            }
+
+            const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -195,6 +212,20 @@ class EspaciosService {
 
   getEscuelaNameById(id: number): string {
     return ESCUELAS_MAP[id] || `Escuela ${id}`;
+  }
+getEscuelaIdByName(nombre: string | null | undefined): number | null {
+    if (!nombre) {
+      return null;
+    }
+
+    const normalizedNombre = normalizeString(nombre);
+    for (const [id, nombreEscuela] of Object.entries(ESCUELAS_MAP)) {
+      if (normalizeString(nombreEscuela) === normalizedNombre) {
+        return Number(id);
+      }
+    }
+
+    return null;
   }
 
   // Método para mapear estado numérico a texto

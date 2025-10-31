@@ -7,9 +7,11 @@ import com.integraupt.repositorio.clsRepositorioEspacio;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
 
 @Service
 public class clsServicioEspacio {
@@ -27,9 +29,15 @@ public class clsServicioEspacio {
      * Obtener todos los espacios
      */
     @Transactional(readOnly = true)
-    public List<clsDTOEspacioResponse.EspacioDTO> obtenerTodosLosEspacios() {
-        List<clsEntidadEspacio> espacios = repositorioEspacio.findAll();
+    public List<clsDTOEspacioResponse.EspacioDTO> obtenerTodosLosEspacios(Integer escuelaId) {
+        List<clsEntidadEspacio> espacios =
+                escuelaId != null
+                        ? repositorioEspacio.findByEscuelaId(escuelaId)
+                        : repositorioEspacio.findAll();
         return espacios.stream()
+                .sorted(Comparator.comparing(
+                        clsEntidadEspacio::getNombre,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .map(this::convertirEntidadADTO)
                 .collect(Collectors.toList());
     }
@@ -175,9 +183,15 @@ public class clsServicioEspacio {
      * Obtener espacios disponibles
      */
     @Transactional(readOnly = true)
-    public List<clsDTOEspacioResponse.EspacioDTO> obtenerEspaciosDisponibles() {
-        List<clsEntidadEspacio> espacios = repositorioEspacio.findByEstadoOrderByNombreAsc(1);
+    public List<clsDTOEspacioResponse.EspacioDTO> obtenerEspaciosDisponibles(Integer escuelaId) {
+        List<clsEntidadEspacio> espacios =
+                escuelaId != null
+                        ? repositorioEspacio.findByEscuelaIdAndEstado(escuelaId, 1)
+                        : repositorioEspacio.findByEstadoOrderByNombreAsc(1);
         return espacios.stream()
+                .sorted(Comparator.comparing(
+                        clsEntidadEspacio::getNombre,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .map(this::convertirEntidadADTO)
                 .collect(Collectors.toList());
     }

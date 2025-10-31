@@ -34,4 +34,8 @@ public interface clsRepositorioEspacio extends JpaRepository<clsEntidadEspacio, 
     
     // Buscar por código ignorando mayúsculas/minúsculas
     Optional<clsEntidadEspacio> findByCodigoIgnoreCase(String codigo);
+
+    // Buscar por escuela y estado
+    List<clsEntidadEspacio> findByEscuelaIdAndEstado(Integer escuelaId, Integer estado);
+
 }

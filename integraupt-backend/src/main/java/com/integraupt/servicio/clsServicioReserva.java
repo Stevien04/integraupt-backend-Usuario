@@ -141,6 +141,7 @@ public class clsServicioReserva {
         reserva.setEstado("Aprobada");
         reserva.setMotivo(null);
         clsEntidadReserva actualizada = repositorioReserva.save(reserva);
+        repositorioReserva.aprobarReservaProcedure(actualizada.getIdReserva());
         actualizarOcupacionHorario(actualizada, true);
         return mapearReserva(actualizada);
     }

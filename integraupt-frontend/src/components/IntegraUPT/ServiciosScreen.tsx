@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navigation } from './Navigation';
 import { Calendar, Clock, MapPin, Plus, Trash2, X, Check, Server, Monitor, MessageCircle, ArrowLeft, Eye, Building2, BookOpen, Users as UsersIcon, ClipboardList, AlertCircle } from 'lucide-react';
 import './../../styles/ServiciosScreen.css';
@@ -8,6 +8,12 @@ import { serviciosScreenService, type HorarioCompleto } from './services/servici
 import { horariosService, type BloqueHorarioCatalogoMap } from './services/horariosService';
 
 import type { Espacio, Reservacion } from './types';
+
+interface BackendSession {
+  perfil?: {
+    escuela?: string | null;
+  } | null;
+}
 
 interface BloqueHorario {
   id: number;
@@ -65,6 +71,9 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [estadoReservasFiltro, setEstadoReservasFiltro] = useState<EstadoReservasFiltro>('pending');
   const [estadoReservasBusqueda, setEstadoReservasBusqueda] = useState('');
   const [reservaMotivoVisibleId, setReservaMotivoVisibleId] = useState<string | null>(null);
+  const [escuelaId, setEscuelaId] = useState<number | null | undefined>(undefined);
+
+    const loginType = user.user_metadata.login_type;
 
     const estadoReservasInfo: Record<EstadoReservasFiltro, { label: string; descripcion: string }> = {
       pending: {
@@ -262,41 +271,43 @@ const bloquesOrdenados = useMemo(() => {
   ]);
 
   // Cargar datos reales al montar el componente
-  useEffect(() => {
-    cargarEspacios();
-    cargarReservaciones();
+  const cargarEspacios = useCallback(async (escuelaIdFiltro?: number | null) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const filtros = escuelaIdFiltro != null ? { escuelaId: escuelaIdFiltro } : undefined;
+        const espaciosBD = await espaciosService.getAllEspacios(filtros);
+
+        const espaciosFiltrados = escuelaIdFiltro != null
+          ? espaciosBD.filter(espacioBD => {
+              const espacioEscuelaId = espaciosService.getEscuelaIdByName(espacioBD.escuela);
+              return espacioEscuelaId === escuelaIdFiltro;
+            })
+          : espaciosBD;
+
+        const espaciosMapeados: Espacio[] = espaciosFiltrados.map(espacioBD => ({
+          id: espacioBD.id.toString(),
+          codigo: espacioBD.codigo,
+          nombre: espacioBD.nombre,
+          ubicacion: espacioBD.ubicacion || 'Ubicación no especificada',
+          tipo: espaciosService.getTipoFrontend(espacioBD.tipo),
+          capacidad: espacioBD.capacidad,
+          equipamiento: espacioBD.equipamiento || 'Equipamiento no especificado',
+          facultad: espacioBD.facultad,
+          escuela: espacioBD.escuela,
+          estado: espaciosService.getEstadoTexto(espacioBD.estado)
+        }));
+
+        setEspacios(espaciosMapeados);
+      } catch (err) {
+        setError('Error al cargar los espacios');
+        console.error('Error cargando espacios:', err);
+      } finally {
+        setLoading(false);
+      }
   }, []);
 
-  const cargarEspacios = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    const espaciosBD = await espaciosService.getAllEspacios();
-
-    // Mapear datos de BD a formato del frontend
-    const espaciosMapeados: Espacio[] = espaciosBD.map(espacioBD => ({
-      id: espacioBD.id.toString(),
-      codigo: espacioBD.codigo,
-      nombre: espacioBD.nombre,
-      ubicacion: espacioBD.ubicacion || 'Ubicación no especificada',
-      tipo: espaciosService.getTipoFrontend(espacioBD.tipo),
-      capacidad: espacioBD.capacidad,
-      equipamiento: espacioBD.equipamiento || 'Equipamiento no especificado',
-      facultad: espacioBD.facultad,
-      escuela: espacioBD.escuela,
-      estado: espaciosService.getEstadoTexto(espacioBD.estado)
-    }));
-
-    setEspacios(espaciosMapeados);
-  } catch (err) {
-    setError('Error al cargar los espacios');
-    console.error('Error cargando espacios:', err);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const cargarReservaciones = async () => {
+ const cargarReservaciones = useCallback(async () => {
     try {
       const reservasBD = await reservasService.getReservasPorEstado();
 
@@ -309,7 +320,52 @@ const bloquesOrdenados = useMemo(() => {
     } catch (err) {
       console.error('Error cargando reservaciones:', err);
     }
-  };
+  }, []);
+
+    useEffect(() => {
+      if (loginType !== 'academic') {
+        setEscuelaId(null);
+        return;
+      }
+
+      if (typeof window === 'undefined') {
+        setEscuelaId(null);
+        return;
+      }
+
+      try {
+        const sessionRaw = localStorage.getItem('backend_session');
+        if (!sessionRaw) {
+          setEscuelaId(null);
+          return;
+        }
+
+        const session = JSON.parse(sessionRaw) as BackendSession;
+        const escuelaNombre = session?.perfil?.escuela ?? null;
+        if (!escuelaNombre) {
+          setEscuelaId(null);
+          return;
+        }
+
+        const resolvedId = espaciosService.getEscuelaIdByName(escuelaNombre);
+        setEscuelaId(resolvedId ?? null);
+      } catch (storageError) {
+        console.error('Error al obtener la escuela del usuario desde la sesión', storageError);
+        setEscuelaId(null);
+      }
+    }, [loginType]);
+
+    useEffect(() => {
+      if (escuelaId === undefined) {
+        return;
+      }
+
+      cargarEspacios(escuelaId);
+    }, [cargarEspacios, escuelaId]);
+
+    useEffect(() => {
+      cargarReservaciones();
+    }, [cargarReservaciones]);
 
   const handleCreateEspacio = async () => {
     try {
@@ -668,7 +724,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
         {error && (
           <div className="servicios-error">
             {error}
-            <button onClick={cargarEspacios} className="servicios-retry-btn">
+            <button onClick={() => cargarEspacios(escuelaId ?? null)} className="servicios-retry-btn">
               Reintentar
             </button>
           </div>

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -22,9 +23,12 @@ public interface clsRepositorioReserva extends JpaRepository<clsEntidadReserva, 
     Long countByEspacioAndEstado(clsEntidadEspacio espacio, String estado);
 
 
-boolean existsByEspacioAndFechaReservaAndBloqueAndEstadoIn(
-        clsEntidadEspacio_Reserva espacio,
-        LocalDate fechaReserva,
-        clsEntidadBloqueHorario bloque,
-        List<String> estados);
+    boolean existsByEspacioAndFechaReservaAndBloqueAndEstadoIn(
+            clsEntidadEspacio_Reserva espacio,
+            LocalDate fechaReserva,
+            clsEntidadBloqueHorario bloque,
+            List<String> estados);
+
+    @Procedure(procedureName = "aprobar_reserva")
+    void aprobarReservaProcedure(Integer idReserva);
 }
