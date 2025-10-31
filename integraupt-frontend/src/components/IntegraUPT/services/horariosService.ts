@@ -20,15 +20,25 @@ export interface CursoHorarioFormData {
   estado: boolean;
 }
 
-const BLOQUES_HORARIOS_MAP: { [key: number]: { nombre: string; horaInicio: string; horaFinal: string } } = {
-  10: { nombre: 'B1', horaInicio: '08:00', horaFinal: '08:50' },
-  11: { nombre: 'B2', horaInicio: '08:50', horaFinal: '09:40' },
-  13: { nombre: 'B3', horaInicio: '09:40', horaFinal: '10:30' }
+export interface BloqueHorarioCatalogo {
+  nombre: string;
+  horaInicio: string;
+  horaFinal: string;
+  orden?: number;
+}
+
+export type BloqueHorarioCatalogoMap = Record<number, BloqueHorarioCatalogo>;
+
+const DEFAULT_BLOQUES_HORARIOS: BloqueHorarioCatalogoMap = {
+  10: { nombre: 'B1', horaInicio: '08:00', horaFinal: '08:50', orden: 1 },
+  11: { nombre: 'B2', horaInicio: '08:50', horaFinal: '09:40', orden: 2 },
+  13: { nombre: 'B3', horaInicio: '09:40', horaFinal: '10:30', orden: 3 }
 };
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
 
 class HorariosService {
+     private bloquesHorariosCache: BloqueHorarioCatalogoMap = { ...DEFAULT_BLOQUES_HORARIOS };
   async getAllHorarios(): Promise<Horario[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/horarios`);
@@ -238,8 +248,38 @@ class HorariosService {
     }
   }
 
-  getBloquesHorarios() {
-    return BLOQUES_HORARIOS_MAP;
+  getBloquesHorarios(): BloqueHorarioCatalogoMap {
+      return { ...this.bloquesHorariosCache };
+    }
+
+    async fetchBloquesHorarios(): Promise<BloqueHorarioCatalogoMap> {
+      const response = await fetch(`${API_BASE_URL}/api/bloques-horarios`);
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const bloques: Array<{
+        id: number;
+        nombre: string;
+        horaInicio: string;
+        horaFinal: string;
+        orden?: number | null;
+      }> = await response.json();
+
+      const catalogo = bloques.reduce<BloqueHorarioCatalogoMap>((mapa, bloque) => {
+        mapa[bloque.id] = {
+          nombre: bloque.nombre,
+          horaInicio: bloque.horaInicio,
+          horaFinal: bloque.horaFinal,
+          orden: bloque.orden ?? undefined
+        };
+        return mapa;
+      }, {});
+
+      this.bloquesHorariosCache = { ...catalogo };
+
+      return this.getBloquesHorarios();
   }
 
   getDiasSemana() {
@@ -247,7 +287,7 @@ class HorariosService {
   }
 
   getBloqueInfoById(bloqueId: number) {
-    return BLOQUES_HORARIOS_MAP[bloqueId] || { nombre: `Bloque ${bloqueId}`, horaInicio: 'N/A', horaFinal: 'N/A' };
+   return this.bloquesHorariosCache[bloqueId] || { nombre: `Bloque ${bloqueId}`, horaInicio: 'N/A', horaFinal: 'N/A' };
   }
 
   getBloqueNombreById(bloqueId: number): string {
