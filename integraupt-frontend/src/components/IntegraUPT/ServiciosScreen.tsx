@@ -5,6 +5,7 @@ import './../../styles/ServiciosScreen.css';
 import { espaciosService } from './services/espaciosService';
 import { reservasService } from './services/reservasService';
 import { serviciosScreenService, type HorarioCompleto } from './services/serviciosScreenService';
+import { horariosService } from './services/horariosService';
 
 import type { Espacio, Reservacion } from './types';
 
@@ -13,6 +14,7 @@ interface BloqueHorario {
   label: string;
   horaInicio: string;
   horaFinal: string;
+  orden: number;
 }
 
 interface ServiciosScreenProps {
@@ -52,6 +54,44 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [reservacionesEspacios, setReservacionesEspacios] = useState<Reservacion[]>([]);
   const [horariosEspacios, setHorariosEspacios] = useState<Record<string, HorarioCompleto[]>>({});
   const [horariosCargando, setHorariosCargando] = useState(false);
+
+  const bloquesCatalogo = useMemo(() => horariosService.getBloquesHorarios(), []);
+    const ordenBloques = useMemo(() => {
+      const mapaOrden = new Map<number, number>();
+      Object.keys(bloquesCatalogo).forEach((id, index) => {
+        mapaOrden.set(Number(id), index);
+      });
+      return mapaOrden;
+    }, [bloquesCatalogo]);
+
+    const formatearHora = (hora?: string | null) => {
+      if (!hora || hora === 'N/A') {
+        return 'N/A';
+      }
+
+      const match = hora.match(/^(\d{1,2}):(\d{2})/);
+      if (match) {
+        const horas = match[1].padStart(2, '0');
+        const minutos = match[2];
+        return `${horas}:${minutos}`;
+      }
+
+      return hora;
+    };
+
+    const obtenerOrdenBloque = (bloqueId: number) => {
+      const bloqueCatalogo = bloquesCatalogo[bloqueId];
+      if (bloqueCatalogo?.nombre) {
+        const match = bloqueCatalogo.nombre.match(/(\d+)/);
+        if (match) {
+          return parseInt(match[0], 10);
+        }
+      }
+      const ordenCatalogo = ordenBloques.get(bloqueId);
+      return ordenCatalogo !== undefined ? ordenCatalogo + 1 : bloqueId;
+    };
+
+
   // Estado para formulario de reserva de espacios
   const [espaciosForm, setEspaciosForm] = useState({
     type: 'laboratorio' as 'laboratorio' | 'aula',
@@ -313,6 +353,7 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
 
 
 
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'servicios-status-active';
@@ -375,29 +416,34 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
         if (!horariosSeleccionados.length) {
           return [];
     }
+const mapaBloques = new Map<number, BloqueHorario>();
 
+  horariosSeleccionados.forEach(horario => {
+           if (!mapaBloques.has(horario.bloqueId)) {
+             const bloqueCatalogo = bloquesCatalogo[horario.bloqueId];
+             const horaInicioCatalogo = formatearHora(bloqueCatalogo?.horaInicio || horario.horaInicio);
+             const horaFinalCatalogo = formatearHora(bloqueCatalogo?.horaFinal || horario.horaFinal);
 
-  const mapaBloques = new Map<number, BloqueHorario>();
-
-   horariosSeleccionados.forEach(horario => {
-         if (!mapaBloques.has(horario.bloqueId)) {
-           const label = horario.bloqueNombre && horario.bloqueNombre.trim().length > 0
-             ? horario.bloqueNombre
-             : `${horario.horaInicio} - ${horario.horaFinal}`;
-
-     mapaBloques.set(horario.bloqueId, {
+    mapaBloques.set(horario.bloqueId, {
               id: horario.bloqueId,
-              label,
-              horaInicio: horario.horaInicio,
-              horaFinal: horario.horaFinal
+             label: `${horaInicioCatalogo} a ${horaFinalCatalogo}`,
+                           horaInicio: horaInicioCatalogo,
+                           horaFinal: horaFinalCatalogo,
+                           orden: obtenerOrdenBloque(horario.bloqueId)
             });
           }
         });
 
-    return Array.from(mapaBloques.values()).sort((a, b) =>
-         a.horaInicio.localeCompare(b.horaInicio)
-       );
-     }, [horariosSeleccionados]);
+   return Array.from(mapaBloques.values()).sort((a, b) => {
+             if (a.orden !== b.orden) {
+               return a.orden - b.orden;
+             }
+             if (a.horaInicio !== 'N/A' && b.horaInicio !== 'N/A') {
+               return a.horaInicio.localeCompare(b.horaInicio);
+             }
+             return a.id - b.id;
+           });
+         }, [horariosSeleccionados, bloquesCatalogo, ordenBloques]);
 
 
        const obtenerHorarioParaCelda = (dia: string, bloqueId: number) => {
