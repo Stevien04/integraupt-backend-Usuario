@@ -760,7 +760,10 @@ const mapaBloques = new Map<number, BloqueHorario>();
                                                   </td>
                                                   {diasTabla.map(dia => {
                                                     const horarioCelda = obtenerHorarioParaCelda(dia.clave, bloque.id);
-                                                    const estaOcupado = Boolean(horarioCelda?.ocupado && horarioCelda?.curso);
+                                                       const estaOcupado = Boolean(horarioCelda?.ocupado);
+
+                                                       const horaInicioCelda = formatearHora(horarioCelda?.horaInicio);
+                                                       const horaFinalCelda = formatearHora(horarioCelda?.horaFinal);
 
                                                     return (
                                                       <td
@@ -773,11 +776,19 @@ const mapaBloques = new Map<number, BloqueHorario>();
                                                       >
                                                         {estaOcupado && horarioCelda ? (
                                                           <div className="servicios-horario-curso">
-                                                            <div className="servicios-horario-curso-nombre">{horarioCelda.curso}</div>
-                                                            <div className="servicios-horario-curso-profesor">{horarioCelda.docente || 'Docente no asignado'}</div>
-                                                            <div className="servicios-horario-curso-estudiantes">
-                                                              {horarioCelda.horaInicio} - {horarioCelda.horaFinal}
+                                                          <div className="servicios-horario-curso-nombre">
+                                                          {horarioCelda.curso || 'Bloque reservado'}
                                                             </div>
+                                                            {horarioCelda.curso && (
+                                                                                                                          <div className="servicios-horario-curso-profesor">
+                                                                                                                            {horarioCelda.docente || 'Docente no asignado'}
+                                                                                                                          </div>
+                                                                                                                        )}
+                                                                                                                        {(horaInicioCelda !== 'N/A' || horaFinalCelda !== 'N/A') && (
+                                                                                                                          <div className="servicios-horario-curso-estudiantes">
+                                                                                                                            {horaInicioCelda} - {horaFinalCelda}
+                                                                                                                          </div>
+                                                                                                                        )}
                                                           </div>
                                                         ) : (
                                                           <div className="servicios-horario-vacio">Disponible</div>
