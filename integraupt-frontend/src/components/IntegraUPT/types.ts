@@ -114,7 +114,7 @@ export interface Reservacion {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'active' | 'pending' | 'cancelled' | 'approved';
+    status: 'active' | 'pending' | 'cancelled' | 'approved' | 'rejected';
   motivo?: string;
   ciclo?: string;
   curso?: string;

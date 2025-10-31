@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigation } from './Navigation';
-import { Calendar, Clock, MapPin, Search, Plus, Edit, Trash2, X, Check, Server, Monitor, MessageCircle, ArrowLeft, Eye, Building2, BookOpen, Users as UsersIcon } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, Trash2, X, Check, Server, Monitor, MessageCircle, ArrowLeft, Eye, Building2, BookOpen, Users as UsersIcon, ClipboardList, AlertCircle } from 'lucide-react';
 import './../../styles/ServiciosScreen.css';
 import { espaciosService } from './services/espaciosService';
 import { reservasService } from './services/reservasService';
@@ -33,6 +33,7 @@ interface ServiciosScreenProps {
   onSectionChange?: (section: 'home' | 'servicios' | 'eventos' | 'perfil') => void;
   onBackToDashboard?: () => void;
 }
+type EstadoReservasFiltro = 'pending' | 'approved' | 'rejected';
 
 export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   user,
@@ -43,7 +44,6 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [selectedService, setSelectedService] = useState<'menu' | 'espacios' | 'citas'>('menu');
   const [view, setView] = useState<'list' | 'new' | 'edit' | 'espacios-grid' | 'horario-semanal' | 'reservar-espacio'>('list');
   const [selectedEspacio, setSelectedEspacio] = useState<Espacio | null>(null);
-  const [selectedReservacion, setSelectedReservacion] = useState<Reservacion | null>(null);
   const [showReservaModal, setShowReservaModal] = useState(false);
   const [espacioToReserve, setEspacioToReserve] = useState<Espacio | null>(null);
   const [reservaModalError, setReservaModalError] = useState<string | null>(null);
@@ -61,6 +61,24 @@ export const ServiciosScreen: React.FC<ServiciosScreenProps> = ({
   const [bloquesError, setBloquesError] = useState<string | null>(null);
   const [formSuccessMessage, setFormSuccessMessage] = useState<string | null>(null);
   const [reservaModalSuccess, setReservaModalSuccess] = useState<string | null>(null);
+  const [mostrarEstadoReservas, setMostrarEstadoReservas] = useState(false);
+  const [estadoReservasFiltro, setEstadoReservasFiltro] = useState<EstadoReservasFiltro>('pending');
+  const [reservaMotivoVisibleId, setReservaMotivoVisibleId] = useState<string | null>(null);
+
+    const estadoReservasInfo: Record<EstadoReservasFiltro, { label: string; descripcion: string }> = {
+      pending: {
+        label: 'Pendientes',
+        descripcion: 'Solicitudes en revisión por el administrador'
+      },
+      approved: {
+        label: 'Aprobadas',
+        descripcion: 'Solicitudes aprobadas y listas para usarse'
+      },
+      rejected: {
+        label: 'Rechazadas',
+        descripcion: 'Solicitudes rechazadas por el administrador'
+      }
+    };
 
    useEffect(() => {
      let activo = true;
@@ -148,6 +166,11 @@ const bloquesOrdenados = useMemo(() => {
       });
   }, [bloquesCatalogo, ordenBloques]);
 
+ const reservasFiltradasPorEstado = useMemo(
+    () => reservacionesEspacios.filter(reserva => reserva.status === estadoReservasFiltro),
+    [estadoReservasFiltro, reservacionesEspacios]
+  );
+
 
   // Estado para formulario de reserva de espacios
   const [espaciosForm, setEspaciosForm] = useState({
@@ -166,6 +189,7 @@ const bloquesOrdenados = useMemo(() => {
     ciclo: '',
     curso: '',
     date: '',
+    bloqueId: '',
     startTime: '',
     endTime: '',
     motivo: ''
@@ -272,7 +296,7 @@ const bloquesOrdenados = useMemo(() => {
       // Recargar reservaciones
       await cargarReservaciones();
 
-      setEspaciosForm({ type: 'laboratorio', resource: '', date: '', startTime: '', endTime: '', ciclo: '', curso: '' });
+      setEspaciosForm({ type: 'laboratorio', resource: '', date: '', bloqueId: '', startTime: '', endTime: '', ciclo: '', curso: '' });
       setFormSuccessMessage('¡Reserva enviada! Tu solicitud está pendiente de aprobación por el administrador.');
 
     } catch (err) {
@@ -476,6 +500,7 @@ const closeReservaModal = () => {
       case 'pending': return 'servicios-status-pending';
       case 'cancelled': return 'servicios-status-cancelled';
       case 'approved': return 'servicios-status-approved';
+       case 'rejected': return 'servicios-status-rejected';
       default: return 'servicios-status-default';
     }
   };
@@ -486,6 +511,7 @@ const closeReservaModal = () => {
       case 'pending': return 'Pendiente';
       case 'cancelled': return 'Cancelada';
       case 'approved': return 'Aprobada';
+      case 'rejected': return 'Rechazada';
       default: return status;
     }
   };
@@ -951,6 +977,17 @@ const mapaBloques = new Map<number, BloqueHorario>();
                 <Plus className="servicios-action-btn-icon" />
                 Nueva Reserva de Espacio
               </button>
+              <button
+                              onClick={() => {
+                                                setEstadoReservasFiltro('pending');
+                                                setReservaMotivoVisibleId(null);
+                                                setMostrarEstadoReservas(true);
+                                              }}
+                              className="servicios-action-btn servicios-action-btn-info"
+                            >
+                              <ClipboardList className="servicios-action-btn-icon" />
+                              Estado de mis Reservas
+                            </button>
             </div>
 
             {reservacionesEspacios.length === 0 ? (
@@ -973,7 +1010,8 @@ const mapaBloques = new Map<number, BloqueHorario>();
                     className={`servicios-reserva-card ${
                       reservacion.status === 'active' ? 'servicios-reserva-active' :
                       reservacion.status === 'pending' ? 'servicios-reserva-pending' :
-                      reservacion.status === 'approved' ? 'servicios-reserva-approved' : 'servicios-reserva-cancelled'
+                     reservacion.status === 'approved' ? 'servicios-reserva-approved' :
+                     reservacion.status === 'rejected' ? 'servicios-reserva-rejected' : 'servicios-reserva-cancelled'
                     }`}
                   >
                     <div className="servicios-reserva-header">
@@ -1011,7 +1049,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                       )}
                     </div>
 
-                    {reservacion.status !== 'cancelled' && (
+                    {reservacion.status !== 'cancelled' && reservacion.status !== 'rejected' && (
                       <button
                         onClick={() => handleCancelReservacion(reservacion.id, 'espacios')}
                         className="servicios-reserva-action servicios-reserva-action-cancel"
@@ -1021,7 +1059,7 @@ const mapaBloques = new Map<number, BloqueHorario>();
                       </button>
                     )}
 
-                    {reservacion.status === 'cancelled' && (
+                   {(reservacion.status === 'cancelled' || reservacion.status === 'rejected') && (
                       <button
                         onClick={() => handleDeleteReservacion(reservacion.id, 'espacios')}
                         className="servicios-reserva-action servicios-reserva-action-delete"
@@ -1362,6 +1400,118 @@ const mapaBloques = new Map<number, BloqueHorario>();
             </div>
           </div>
         )}
+    {mostrarEstadoReservas && (
+              <div className="servicios-estado-modal-overlay" role="dialog" aria-modal="true">
+                <div className="servicios-estado-modal">
+                  <div className="servicios-estado-modal-header">
+                    <div>
+                      <h2 className="servicios-estado-modal-title">Estado de mis reservas</h2>
+                      <p className="servicios-estado-modal-subtitle">
+                        Consulta rápidamente cuáles de tus solicitudes están pendientes, aprobadas o han sido rechazadas.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="servicios-estado-modal-close"
+                      onClick={() => {
+                        setMostrarEstadoReservas(false);
+                        setReservaMotivoVisibleId(null);
+                      }}
+                      aria-label="Cerrar"
+                    >
+                      <X className="servicios-estado-modal-close-icon" />
+                    </button>
+                  </div>
+
+                  <div className="servicios-estado-filters">
+                    {(Object.keys(estadoReservasInfo) as EstadoReservasFiltro[]).map((estado) => (
+                      <button
+                        key={estado}
+                        type="button"
+                        className={`servicios-estado-filter-btn ${estadoReservasFiltro === estado ? 'is-active' : ''}`}
+                        onClick={() => {
+                          setEstadoReservasFiltro(estado);
+                          setReservaMotivoVisibleId(null);
+                        }}
+                      >
+                        <span className="servicios-estado-filter-label">{estadoReservasInfo[estado].label}</span>
+                        <span className="servicios-estado-filter-description">{estadoReservasInfo[estado].descripcion}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="servicios-estado-list">
+                    {reservasFiltradasPorEstado.length === 0 ? (
+                      <div className="servicios-estado-empty">
+                        <ClipboardList className="servicios-estado-empty-icon" />
+                        <h3 className="servicios-estado-empty-title">Sin resultados en esta categoría</h3>
+                        <p className="servicios-estado-empty-text">Cuando tengas reservas en este estado las verás aquí.</p>
+                      </div>
+                    ) : (
+                      reservasFiltradasPorEstado.map((reserva) => {
+                        const esRechazada = reserva.status === 'rejected';
+                        const mostrarMotivo = esRechazada && reservaMotivoVisibleId === reserva.id;
+
+                        return (
+                          <div
+                            key={reserva.id}
+                            className={`servicios-estado-item servicios-estado-item-${reserva.status} ${
+                              esRechazada ? 'servicios-estado-item-clickable' : ''
+                            } ${mostrarMotivo ? 'is-open' : ''}`}
+                            onClick={() => {
+                              if (esRechazada) {
+                                setReservaMotivoVisibleId((prev) => (prev === reserva.id ? null : reserva.id));
+                              }
+                            }}
+                            onKeyDown={(event) => {
+                              if (esRechazada && (event.key === 'Enter' || event.key === ' ')) {
+                                event.preventDefault();
+                                setReservaMotivoVisibleId((prev) => (prev === reserva.id ? null : reserva.id));
+                              }
+                            }}
+                            role={esRechazada ? 'button' : undefined}
+                            tabIndex={esRechazada ? 0 : undefined}
+                          >
+                            <div className="servicios-estado-item-main">
+                              <div>
+                                <h3 className="servicios-estado-item-title">{reserva.resource}</h3>
+                                <p className="servicios-estado-item-info">
+                                  {new Date(reserva.date).toLocaleDateString('es-ES')} · {reserva.startTime} - {reserva.endTime}
+                                </p>
+                                {reserva.curso && (
+                                  <p className="servicios-estado-item-extra">Curso: {reserva.curso}</p>
+                                )}
+                              </div>
+                              <span className={`servicios-estado-item-status ${getStatusColor(reserva.status)}`}>
+                                {getStatusLabel(reserva.status)}
+                              </span>
+                            </div>
+
+                            {esRechazada && (
+                              <div className="servicios-estado-item-message">
+                                {mostrarMotivo ? (
+                                  <div className="servicios-estado-item-motivo">
+                                    <AlertCircle className="servicios-estado-item-motivo-icon" />
+                                    <div>
+                                      <p className="servicios-estado-item-motivo-title">Motivo del rechazo</p>
+                                      <p className="servicios-estado-item-motivo-text">
+                                        {reserva.motivo?.trim() ? reserva.motivo : 'El administrador no proporcionó un motivo.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="servicios-estado-item-hint">Haz clic para ver el motivo del rechazo</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
       </main>
     </div>
   );

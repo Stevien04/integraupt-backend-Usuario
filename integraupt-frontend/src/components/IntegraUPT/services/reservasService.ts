@@ -137,12 +137,12 @@ class ReservasService {
     };
   }
 
-  private mapearEstado(estadoBD: string): 'active' | 'pending' | 'cancelled' | 'approved' {
+   private mapearEstado(estadoBD: string): 'active' | 'pending' | 'cancelled' | 'approved' | 'rejected' {
     switch (estadoBD) {
       case 'Aprobada': return 'approved';
       case 'Pendiente': return 'pending';
       case 'Cancelado': return 'cancelled';
-      case 'Rechazada': return 'cancelled';
+       case 'Rechazada': return 'rejected';
       default: return 'pending';
     }
   }
