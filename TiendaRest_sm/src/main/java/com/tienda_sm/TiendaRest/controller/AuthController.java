@@ -13,8 +13,19 @@ public class AuthController {
 
     private final Random random = new Random();
 
+    @GetMapping("/")
+    public String home(HttpSession session) {
+        if (session.getAttribute("loggedInUser") != null) {
+            return "redirect:/cargos";
+        }
+        return "redirect:/login";
+    }
+
     @GetMapping("/login")
     public String showLogin(Model model, HttpSession session) {
+        if (session.getAttribute("loggedInUser") != null) {
+            return "redirect:/cargos";
+        }
         prepareCaptcha(model, session);
         return "login";
     }
@@ -40,11 +51,14 @@ public class AuthController {
             prepareCaptcha(model, session);
             return "login";
         }
+         session.setAttribute("loggedInUser", username);
+        return "redirect:/cargos";
+    }
 
-        model.addAttribute("message", "Inicio de sesión exitoso (validación simulada).");
-        model.addAttribute("username", username);
-        prepareCaptcha(model, session);
-        return "login";
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/login";
     }
 
     private boolean isCaptchaValid(String captchaResponse, HttpSession session) {

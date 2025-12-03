@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de cargos</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --danger: #dc2626;
+            --bg: #f3f4f6;
+            --text: #111827;
+        }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        header {
+            background: #111827;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container {
+            max-width: 960px;
+            margin: 24px auto;
+            background: white;
+            padding: 24px;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 24px;
+        }
+        p.subtitle { margin: 0 0 20px; color: #4b5563; }
+        form {
+            display: grid;
+            grid-template-columns: 1fr 180px;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 18px;
+        }
+        label { font-weight: 600; color: #374151; }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            border: none;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: var(--danger); color: white; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th { background: #f9fafb; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; }
+        tr:hover { background: #f3f4f6; }
+        .badge { padding: 6px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-inactive { background: #fee2e2; color: #991b1b; }
+        .actions { display: flex; gap: 8px; }
+        .message { padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; }
+        .message.info { background: #dbeafe; color: #1e3a8a; }
+        .message.error { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+<header>
+    <div>
+        <div style="font-size: 12px; text-transform: uppercase; opacity: 0.8;">Panel</div>
+        <strong>Gestión de cargos</strong>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <span th:text="${session.loggedInUser}"></span>
+        <a th:href="@{/logout}" style="color: white; text-decoration: none; font-weight: 700;">Cerrar sesión</a>
+    </div>
+</header>
+
+<div class="container">
+    <h1>Administrar cargos</h1>
+    <p class="subtitle">Agrega, modifica o cambia el estado de los cargos usando el panel.</p>
+
+    <div id="message" class="message info" style="display:none;"></div>
+
+    <form id="cargo-form">
+        <div>
+            <label for="nombre">Nombre del cargo</label>
+            <input type="text" id="nombre" name="nombre" placeholder="Ej. Cajero" required>
+            <input type="hidden" id="cargo-id">
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn-primary" id="submit-btn">Guardar cargo</button>
+            <button type="button" class="btn-danger" id="cancel-edit" style="display:none;">Cancelar</button>
+        </div>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="cargo-body">
+        <tr><td colspan="4">Cargando...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script th:inline="javascript">
+    const cargoApiUrl = [[@{/cargo}]];
+
+    const form = document.getElementById('cargo-form');
+    const nombreInput = document.getElementById('nombre');
+    const idInput = document.getElementById('cargo-id');
+    const messageBox = document.getElementById('message');
+    const submitBtn = document.getElementById('submit-btn');
+    const cancelBtn = document.getElementById('cancel-edit');
+    const tableBody = document.getElementById('cargo-body');
+
+    function showMessage(text, type = 'info') {
+        messageBox.textContent = text;
+        messageBox.className = `message ${type}`;
+        messageBox.style.display = 'block';
+        setTimeout(() => messageBox.style.display = 'none', 3500);
+    }
+
+    function resetForm() {
+        form.reset();
+        idInput.value = '';
+        submitBtn.textContent = 'Guardar cargo';
+        cancelBtn.style.display = 'none';
+    }
+
+    function renderTable(cargos) {
+        if (!cargos.length) {
+            tableBody.innerHTML = '<tr><td colspan="4">No hay cargos registrados.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        cargos.forEach(cargo => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${cargo.idcargo}</td>
+                <td>${cargo.nombre}</td>
+                <td><span class="badge ${cargo.estado === 1 ? 'badge-active' : 'badge-inactive'}">${cargo.estado === 1 ? 'Activo' : 'Inactivo'}</span></td>
+                <td class="actions">
+                    <button type="button" class="btn-primary" data-action="edit" data-id="${cargo.idcargo}">Editar</button>
+                    <button type="button" class="btn-danger" data-action="delete" data-id="${cargo.idcargo}">Cambiar estado</button>
+                </td>`;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    async function loadCargos() {
+        try {
+            const response = await fetch(cargoApiUrl);
+            const data = await response.json();
+            renderTable(data);
+        } catch (err) {
+            showMessage('No se pudo cargar la lista de cargos.', 'error');
+        }
+    }
+
+    async function saveCargo(event) {
+        event.preventDefault();
+        const id = idInput.value.trim();
+        const payload = { nombre: nombreInput.value.trim(), estado: 1 };
+
+        const isEdit = Boolean(id);
+        const url = isEdit ? `${cargoApiUrl}/${id}` : cargoApiUrl;
+        const method = isEdit ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Respuesta no válida del servidor');
+            }
+
+            resetForm();
+            await loadCargos();
+            showMessage(isEdit ? 'Cargo actualizado correctamente.' : 'Cargo creado con éxito.');
+        } catch (err) {
+            showMessage('No se pudo guardar el cargo. Inténtalo nuevamente.', 'error');
+        }
+    }
+
+    async function deleteCargo(id) {
+        try {
+            const response = await fetch(`${cargoApiUrl}/${id}`, { method: 'DELETE' });
+            if (!response.ok) {
+                throw new Error('Error al cambiar el estado');
+            }
+            await loadCargos();
+            showMessage('Se cambió el estado del cargo.');
+        } catch (err) {
+            showMessage('No se pudo actualizar el estado.', 'error');
+        }
+    }
+
+    function startEdit(id, nombre) {
+        idInput.value = id;
+        nombreInput.value = nombre;
+        submitBtn.textContent = 'Actualizar cargo';
+        cancelBtn.style.display = 'inline-block';
+    }
+
+    tableBody.addEventListener('click', (event) => {
+        const button = event.target;
+        if (button.dataset.action === 'edit') {
+            const row = button.closest('tr');
+            const id = button.dataset.id;
+            const nombre = row.children[1].textContent;
+            startEdit(id, nombre);
+        }
+        if (button.dataset.action === 'delete') {
+            deleteCargo(button.dataset.id);
+        }
+    });
+
+    cancelBtn.addEventListener('click', resetForm);
+    form.addEventListener('submit', saveCargo);
+    loadCargos();
+</script>
+</body>
+</html>

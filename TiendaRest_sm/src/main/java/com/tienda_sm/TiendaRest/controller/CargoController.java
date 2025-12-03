@@ -1,4 +1,4 @@
-package com.tienda_sm.TiendaRest.Tienda.controller;
+package com.tienda_sm.TiendaRest.controller;
 
 import com.tienda_sm.TiendaRest.model.CargoModel;
 import com.tienda_sm.TiendaRest.service.CargoService;
