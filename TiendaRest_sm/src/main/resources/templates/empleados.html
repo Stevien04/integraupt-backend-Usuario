@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empleados</title>
+    <style>
+        :root { --primary: #2563eb; --primary-dark: #1d4ed8; --bg: #f3f4f6; --text: #111827; }
+        body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
+        header { background: #111827; color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 1100px; margin: 24px auto; background: white; padding: 24px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        h1 { margin: 0 0 8px; font-size: 24px; }
+        p.subtitle { margin: 0 0 20px; color: #4b5563; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e5e7eb; }
+        th { background: #f9fafb; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; }
+        tr:hover { background: #f3f4f6; }
+        .badge { padding: 6px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-inactive { background: #fee2e2; color: #991b1b; }
+        .link { color: #fff; background: var(--primary); padding: 8px 12px; border-radius: 6px; text-decoration: none; font-weight: 700; }
+        .link:hover { background: var(--primary-dark); }
+    </style>
+</head>
+<body>
+<header>
+    <div>
+        <div style="font-size: 12px; text-transform: uppercase; opacity: 0.8;">Panel</div>
+        <strong>Empleados</strong>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <a th:if="${session.isAdmin}" th:href="@{/menu}" style="color: white; text-decoration: none; font-weight: 700;">Menú principal</a>
+        <span th:text="${session.loggedInUser}"></span>
+        <a th:href="@{/logout}" style="color: white; text-decoration: none; font-weight: 700;">Cerrar sesión</a>
+    </div>
+</header>
+
+<div class="container">
+    <h1>Listado de empleados</h1>
+    <p class="subtitle">Consulta rápida de la información registrada.</p>
+
+    <div id="message" class="message info" style="display:none;"></div>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre completo</th>
+            <th>Usuario</th>
+            <th>Cargo</th>
+            <th>Estado</th>
+        </tr>
+        </thead>
+        <tbody id="empleado-body">
+        <tr><td colspan="5">Cargando...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script th:inline="javascript">
+    const empleadoApiUrl = [[@{/empleado}]];
+    const tableBody = document.getElementById('empleado-body');
+
+    function renderTable(empleados) {
+        if (!empleados.length) {
+            tableBody.innerHTML = '<tr><td colspan="5">No hay empleados registrados.</td></tr>';
+            return;
+        }
+        tableBody.innerHTML = '';
+        empleados.forEach(empleado => {
+            const tr = document.createElement('tr');
+            const cargoNombre = empleado.idcargo && empleado.idcargo.nombre ? empleado.idcargo.nombre : 'Sin cargo';
+            const estadoBadge = empleado.estado === 1 ? '<span class="badge badge-active">Activo</span>' : '<span class="badge badge-inactive">Inactivo</span>';
+            tr.innerHTML = `
+                <td>${empleado.idEmpleado}</td>
+                <td>${empleado.nombre} ${empleado.apellido}</td>
+                <td>${empleado.usuario || '—'}</td>
+                <td>${cargoNombre}</td>
+                <td>${estadoBadge}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    async function loadEmpleados() {
+        try {
+            const response = await fetch(empleadoApiUrl);
+            const data = await response.json();
+            renderTable(data);
+        } catch (err) {
+            tableBody.innerHTML = '<tr><td colspan="5">No se pudo cargar la lista de empleados.</td></tr>';
+        }
+    }
+
+    loadEmpleados();
+</script>
+</body>
+</html>

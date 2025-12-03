@@ -16,7 +16,7 @@ public class AuthController {
     @GetMapping("/")
     public String home(HttpSession session) {
         if (session.getAttribute("loggedInUser") != null) {
-            return "redirect:/cargos";
+            return redirectByRole(session);
         }
         return "redirect:/login";
     }
@@ -24,7 +24,7 @@ public class AuthController {
     @GetMapping("/login")
     public String showLogin(Model model, HttpSession session) {
         if (session.getAttribute("loggedInUser") != null) {
-            return "redirect:/cargos";
+            return redirectByRole(session);
         }
         prepareCaptcha(model, session);
         return "login";
@@ -51,8 +51,9 @@ public class AuthController {
             prepareCaptcha(model, session);
             return "login";
         }
-         session.setAttribute("loggedInUser", username);
-        return "redirect:/cargos";
+        session.setAttribute("loggedInUser", username);
+        session.setAttribute("isAdmin", isAdminUser(username));
+        return redirectByRole(session);
     }
 
     @GetMapping("/logout")
@@ -81,5 +82,15 @@ public class AuthController {
         int answer = first + second;
         session.setAttribute("captchaAnswer", answer);
         model.addAttribute("captchaQuestion", first + " + " + second + " =");
+    }
+
+    private boolean isAdminUser(String username) {
+        return "administrador".equalsIgnoreCase(username.trim());
+    }
+
+    private String redirectByRole(HttpSession session) {
+        Object adminFlag = session.getAttribute("isAdmin");
+        boolean isAdmin = adminFlag instanceof Boolean && (Boolean) adminFlag;
+        return isAdmin ? "redirect:/menu" : "redirect:/empleados";
     }
 }

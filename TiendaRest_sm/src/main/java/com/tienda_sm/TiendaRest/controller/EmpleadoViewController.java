@@ -5,15 +5,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
-public class CargoViewController {
+public class EmpleadoViewController {
 
-    @GetMapping("/cargos")
-    public String showCargoManager(HttpSession session) {
-        Object adminFlag = session.getAttribute("isAdmin");
-        boolean isAdmin = adminFlag instanceof Boolean && (Boolean) adminFlag;
+    @GetMapping("/empleados")
+    public String showEmpleadoPage(HttpSession session) {
         if (session.getAttribute("loggedInUser") == null) {
             return "redirect:/login";
         }
-        return isAdmin ? "cargos" : "redirect:/empleados";
+        return "empleados";
     }
 }

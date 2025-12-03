@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú principal</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; }
+        header { background: #111827; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .wrapper { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+        h1 { margin: 0 0 8px; }
+        p { color: #4b5563; margin-top: 0; }
+        .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        .card h2 { margin: 0 0 10px; font-size: 18px; }
+        .card p { margin: 0 0 12px; }
+        .btn { display: inline-block; padding: 10px 14px; border-radius: 6px; text-decoration: none; color: #fff; background: #2563eb; font-weight: 700; }
+        .btn:hover { background: #1d4ed8; }
+        .logout { color: #fff; text-decoration: none; font-weight: 700; }
+    </style>
+</head>
+<body>
+<header>
+    <div>
+        <div style="font-size: 12px; text-transform: uppercase; opacity: .8;">Panel administrador</div>
+        <strong>Menú principal</strong>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <span th:text="${session.loggedInUser}"></span>
+        <a th:href="@{/logout}" class="logout">Cerrar sesión</a>
+    </div>
+</header>
+
+<div class="wrapper">
+    <h1>Bienvenido</h1>
+    <p>Selecciona una sección para continuar.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Cargos</h2>
+            <p>Gestiona los cargos disponibles en el sistema.</p>
+            <a th:href="@{/cargos}" class="btn">Ir a cargos</a>
+        </div>
+        <div class="card">
+            <h2>Empleados</h2>
+            <p>Consulta y administra la información de los empleados.</p>
+            <a th:href="@{/empleados}" class="btn">Ir a empleados</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
